@@ -1,4 +1,4 @@
-# Goldelox997Frontdisplay
+# Goldelox997Frontdisplay-lib
 Using a uOLED-160-G2 Display from 4dsystems.com.au  to display addional engine data from a Porsche 997
 needs https://github.com/4dsystems/Goldelox-Serial-Arduino-Library
 needs https://github.com/SlashDevin/NeoSWSerial
