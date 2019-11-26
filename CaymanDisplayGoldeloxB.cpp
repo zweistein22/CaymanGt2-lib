@@ -227,7 +227,16 @@ void CaymanDisplay::UpdateError(){
 void CaymanDisplay::Error(const char *err){
 	const char *p = err;
 	int i=0;
-	p=err;
+	unsigned long m=millis();
+	if (m - lasterrortime < 60 * 1000) {
+		bool issame = true;
+		for (i = 0; i < MAXERRSTR - 1; i++) {
+			if(*p!=_lasterror[i]) issame=false;
+			if (*p == 0) break;
+			p++;
+		}
+		if (issame) return;
+	}
 	for(i=0;i<MAXERRSTR-1;i++){
 		_lasterror[i]=*p;
 		if(*p==0) break;
@@ -502,6 +511,9 @@ void CaymanDisplay::Lambda(int lambda,int llamb){
 			}
 			else if (diff >= 1) {
 				_al_line.print(" r");
+			}
+			else if (diff == 0) {
+				_al_line.print("  ");
 			}
 			
 
