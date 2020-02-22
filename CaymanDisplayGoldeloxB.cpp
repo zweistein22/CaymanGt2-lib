@@ -7,8 +7,9 @@
 #include <HoldMaximum.h>
 
 #define GOLDELOX_RESET_PIN 10
-#define MAXERRSTR 60
-char _lasterror[MAXERRSTR];
+#define MAXERRSTR 40
+char _lasterror[MAXERRSTR+1];
+bool bshowerror = true;
 //#define DEBUGSERIAL Serial
 const int fontw=2;
 const int fonth=3;
@@ -26,7 +27,7 @@ int MStrlen(const char *p){
 
 
 
-char _al_buffer[LINE_WIDTH];
+char _al_buffer[LINE_WIDTH+1];
 PString _al_line=PString(_al_buffer, sizeof(_al_buffer));
 
 
@@ -38,10 +39,20 @@ int showerrorseconds=10;
 HoldMaximum<int> h_egt(5000);
 HoldMaximum<float> h_boost(1000);
 
-int TimeOutGoldelox = 1500; // 500 milliseconds
+int TimeOutGoldelox = 1500; // 1500 milliseconds
 unsigned long lastfastprint = millis();
 
+unsigned long lastmovecursor = millis();
+int mintimebetweenmovecursor = 2;
 
+
+void CaymanDisplay::MoveCursor(int cy, int cx) {
+	long to_wait = mintimebetweenmovecursor - (millis() - lastmovecursor);
+	if (to_wait > 0) delay(to_wait);
+	Display.txt_MoveCursor(cy, cx);
+	lastmovecursor = millis();
+
+}
 void CaymanDisplay::FastPrint(char *txt, int cy, int cx, word txtcolor) {
 	//if (cy > 1) return;
 	//if (cx > 0) return;
@@ -123,14 +134,20 @@ void CaymanDisplay::FastPrint(char *txt, int cy, int cx, word txtcolor) {
 						continue;
 					}
 					SetTxtFGColor(BLACK);
-					if(cy!=cpy || i!=cpx )	Display.txt_MoveCursor(cy, i);
-					Display.putCH(oldch);
-					lastfastprint = millis();
-					cpy = cy;
-					cpx = i + 1;
-					
+					if (i < LINE_WIDTH) {
+						if (cy != cpy || i != cpx) {
+							MoveCursor(cy, i);
+							
+						}
+						Display.putCH(oldch);
+						lastfastprint = millis();
+						cpy = cy;
+						cpx = i + 1;
+						// handled in case j==1
+					}
 					c[cy][i] = ' ';
 					ccol[cy][i] = BLACK;
+					
 				}
 				if (j == 1) {
 					SetTxtFGColor(txtcolor);
@@ -147,12 +164,32 @@ void CaymanDisplay::FastPrint(char *txt, int cy, int cx, word txtcolor) {
 						DEBUGSERIAL.print(i);
 						DEBUGSERIAL.println(")");
 #endif
-						if (cy != cpy || i != cpx)	Display.txt_MoveCursor(cy, i);
-						Display.putstr(p);
-						lastfastprint = millis();
-						cpy = cy;
-						cpx = i + MStrlen(p);
-						
+						if (i < LINE_WIDTH) {
+
+							// we split into putstr and putch for the last char, so we do not send "\0"
+							if (cy != cpy || i != cpx) {
+								MoveCursor(cy, i);
+							}
+							int pl= MStrlen(p);
+							if (i + pl >= LINE_WIDTH - 1) {
+								char c = p[LINE_WIDTH - 1 - i];
+								p[LINE_WIDTH - 1 - i] = 0;
+								Display.putstr(p);
+								Display.putCH(c);
+							}
+							else {
+								Display.putstr(p);
+							}
+							lastfastprint = millis();
+							cpy = cy;
+							cpx = i + pl;
+							if (cpx >= LINE_WIDTH) {
+								cpx = 0;
+								cpy = (cy + 1) % LINES_MAXY;
+								MoveCursor(cpy, cpx);
+							}
+
+						}
 						
 					}
 					c[cy][i] = (_s == 0 ? *p : _s);
@@ -205,10 +242,8 @@ void CaymanDisplay::UpdateError(){
 	int is=0;
 	
 	if(len>maxline) {
-		is=istart%(len-maxline+1);
+		is=istart%(len-maxline);
 	}
-
-	
 	if ((millis() - lasterrortime) > showerrorseconds * 1000) {
 			_lasterror[0] = 0;
 	}
@@ -217,9 +252,10 @@ void CaymanDisplay::UpdateError(){
 		for(int f=0;f<maxline;f++){
 			char c=_lasterror[is+f];
 			_al_line.write(c);
-			if(c==0) break;
+			if (c == 0) 	break;
+			
 		}
-		FastPrint(_al_line,0,0,RED) ;
+		if(bshowerror) FastPrint(_al_line,0,0,RED) ;
 	}
 	// start can vary from 0 until Strlen(_lasterrror)-11;
 }
@@ -227,24 +263,36 @@ void CaymanDisplay::UpdateError(){
 void CaymanDisplay::Error(const char *err){
 	const char *p = err;
 	int i=0;
+	if (err == nullptr || *err == 0) {
+		bshowerror=false;
+		return;
+	}
 	unsigned long m=millis();
-	if (m - lasterrortime < 60 * 1000) {
+	if (m - lasterrortime < 30 * 1000) {
 		bool issame = true;
-		for (i = 0; i < MAXERRSTR - 1; i++) {
+		for (i = 0; i < MAXERRSTR ; i++) {
 			if(*p!=_lasterror[i]) issame=false;
 			if (*p == 0) break;
 			p++;
 		}
-		if (issame) return;
+		if (issame) {
+			if (m - lasterrortime > 300) {
+				// we show only errors that occur repeatedly a
+				if(!bshowerror) Serial.println("m - lasterrortime > 300 => showerror=true");
+				bshowerror = true;
+			}
+			else bshowerror = false;
+			return;
+		}
 	}
-	for(i=0;i<MAXERRSTR-1;i++){
+	p = err;
+	for(i=0;i<MAXERRSTR;i++){
 		_lasterror[i]=*p;
 		if(*p==0) break;
 		p++;
 	}
 	_lasterror[i+1]=0;
 	lasterrortime=millis();
-	
 }
 
 
@@ -252,6 +300,7 @@ void CaymanDisplay::Error(const char *err){
 
 void CaymanDisplay::init(){
 	_lasterror[0] = 0;
+	lasterrortime = millis();
 #ifdef DEBUGSERIAL
     DEBUGSERIAL.println("CaymanDisplay::init()");
 #endif
@@ -372,6 +421,7 @@ void CaymanDisplay::init(){
 	bool CaymanDisplay::SetTxtFGColor(word fgc){
 		if(fgc!=tfgcolor){
 		Display.txt_Set(TEXT_COLOUR, fgc) ;
+		delay(5);
 		tfgcolor=fgc;
 		return true;
 		}
@@ -385,7 +435,9 @@ long lasterror = millis();
 
 void CaymanDisplay::EGT(int left,int right,int statusleft,int statusright){
 		
-	if(_lasterror[0] != 0) return;
+	if (bshowerror) {
+		if (_lasterror[0] != 0) return;
+	}
 	FastPrint("EGT ", 0, 0, LIMEGREEN);
 		
 	int WarnTemp=950;
@@ -506,14 +558,14 @@ void CaymanDisplay::Lambda(int lambda,int llamb){
 			if (lambda >= 100 && lambda < 110) _al_line.print("0");
 			_al_line.print(lambda<100?lambda:lambda-100);
 			
-			if (diff > 2) {
+			if (diff > 4) {
 				_al_line.print(" R");
 			}
-			else if (diff >= 1) {
+			else if (diff > 2) {
 				_al_line.print(" r");
 			}
 			else if (diff == 0) {
-				_al_line.print("  ");
+				//_al_line.print("  ");
 			}
 			
 
@@ -525,10 +577,10 @@ void CaymanDisplay::Lambda(int lambda,int llamb){
 			_al_line.print(llamb < 100 ? llamb :llamb - 100 );
 
 									
-			if (diff < -2) {
+			if (diff < -4) {
 				_al_line.print(" L");
 			}
-			else if (diff<= -1) {
+			else if (diff< -2) {
 				_al_line.print(" l");
 			}
 		}

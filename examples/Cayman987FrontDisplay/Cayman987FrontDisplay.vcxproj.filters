@@ -16,6 +16,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Cayman987FrontDisplay.ino" />
+    <None Include=".gitignore" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="__vm\.Cayman987FrontDisplay.vsarduino.h">

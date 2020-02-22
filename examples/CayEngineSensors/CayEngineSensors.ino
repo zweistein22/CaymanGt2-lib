@@ -1,8 +1,12 @@
 #define LAMBDASERIAL Serial2
+#define LAMBDA2SERIAL Serial3
+#define DEBUGSERIAL Serial
 #include <BreitBandLambda.h>
 #include <PString.h>
 #include <Adafruit_MAX31855.h>
 #include <Can997.h>
+
+#define INFOSERIAL Serial
 
 
 int EGTL_PIN_CLK = 52;
@@ -13,7 +17,7 @@ int EGTR_PIN_CLK = 52;
 int EGTR_PIN_CS = 9;
 int EGTR_PIN_DO = 50;   // analog out A2 , A3 A3
 Adafruit_MAX31855 egt_right(EGTR_PIN_CS);
-int WATERPUMPS_PIN =4;
+int WATERPUMPS_PIN =40;
 int GBOXOILPUMP_PIN =6;
 
 int N75 = 3;
@@ -24,6 +28,7 @@ char n75duty=0; //0%
 #define AIRBEFOREIC_PIN A3            // Analog Pin 3
 #define MAP_PIN A4
 #define LA_PIN A7
+#define LA_START A8
 /*
  * 
  * 
@@ -99,7 +104,7 @@ MOTOR_2 can245;
 
 class __WaterpumpsIC {
 
-	int hysterese = 5;
+	int hysterese = 7;
 	int onabove = 58;
 	long maxnachlauf = 2*60*1000; // 5 min
 	long lastnmot = 0;
@@ -108,15 +113,24 @@ public:
 	 bool init(int pin) {
 		 pinMode(pin, OUTPUT);
 		 digitalWrite(pin, started);
-	  //  if(started)  Serial.print("NTK WP started-1\n\r");
+#ifdef INFOSERIAL
+	    if(started)  INFOSERIAL.print("NTK WP started -1\n\r");
+#endif
 	}
 
 	 bool Update() {
 
 		 if (started) {
-			 if (Engine.sensor.iatl,Engine.sensor.iatr < onabove - hysterese ) {
+			 if (max(Engine.sensor.iatl,Engine.sensor.iatr) < onabove - hysterese ) {
 				 digitalWrite(WATERPUMPS_PIN, LOW);
          		 started = false;
+#ifdef INFOSERIAL
+				 INFOSERIAL.print(Engine.sensor.iatl);
+				 INFOSERIAL.print(" (iatl),");
+				 INFOSERIAL.print(Engine.sensor.iatr);
+				 INFOSERIAL.print(" (iatr) :");
+				 INFOSERIAL.print("NTK WP stopped, \n\r");
+#endif
 			 }
 
 			 if (can242.nmot == 0) {
@@ -124,7 +138,9 @@ public:
 
 				 if (millis() > lastnmot + maxnachlauf) {
 					 digitalWrite(WATERPUMPS_PIN, LOW);
-			//		 Serial.print("NTK WP stopped1\n\r");
+#ifdef INFOSERIAL
+					 INFOSERIAL.print("NTK WP stopped1\n\r");
+#endif
 					 started = false;
 				 }
 			 }
@@ -135,10 +151,17 @@ public:
 		 }
 
 		 else {
-			 if (Engine.sensor.iatl,Engine.sensor.iatr > onabove  && can242.nmot / 4 > 500)
-					digitalWrite(WATERPUMPS_PIN, HIGH);
-				//	Serial.print("NTK WP started, \n\r");
-					started = true;
+			 if (max(Engine.sensor.iatl, Engine.sensor.iatr) > (word)onabove && (can242.nmot / 4 > 500)) {
+				 digitalWrite(WATERPUMPS_PIN, HIGH);
+#ifdef INFOSERIAL
+				 INFOSERIAL.print(Engine.sensor.iatl);
+				 INFOSERIAL.print(" (iatl),");
+				 INFOSERIAL.print(Engine.sensor.iatr);
+				 INFOSERIAL.print(" (iatr) :");
+				 INFOSERIAL.print("NTK WP started, \n\r");
+#endif
+				 started = true;
+			 }
 		 }
 		
 		
@@ -173,9 +196,6 @@ float fTrackUse(unsigned long mil,float egtl,float egtr,float map){
 }
 
  boolean gb=false;
-#define SERIALTTL Serial1
-#define SERIALTTLTIMEOUT 150
-#define EXTRA_BYTES 80
 
 void setup() {
 
@@ -191,9 +211,12 @@ TCCR3B = TCCR3B & B11111000 | B00000101;    // set timer 3 divisor to  1024 for 
   pinMode(N75,OUTPUT);
   pinMode(MAP_PIN,INPUT);
   pinMode(LA_PIN, INPUT);
-  delay(3000);
+ // pinMode(LA_START, OUTPUT); // LAMBDA START if set to HIGH
+  delay(250);
   Serial.begin(115200);
+  Serial.println("CayEngineSensor.startup");
   WaterPumpIC.init(WATERPUMPS_PIN);
+ // digitalWrite(LA_START, HIGH);
 }
 
 
@@ -203,10 +226,10 @@ TCCR3B = TCCR3B & B11111000 | B00000101;    // set timer 3 divisor to  1024 for 
 void ReadEGTs() {
 	double tl, tr;
 	tl = egt_left.readCelsius();
-	Engine.sensor.egtl = tl;
+	Engine.sensor.egtl = (int)tl;
 	// Engine.sensor.egtl=random(280,1030);
 	tr = egt_right.readCelsius();
-	Engine.sensor.egtr = tr;
+	Engine.sensor.egtr = (int)tr;
 	Engine.sensor.EGT_Status_left = MAX31855OK;
 
 	if (isnan(tl)) {
@@ -231,20 +254,36 @@ void ReadEGTs() {
 }
 
   
-long idelay=80;  //80ms
 float ftr = 0;
 float maxMAP=1950;
 float alambda;
 int iloop=0;
-
+#define MINLOOPIME 100
+unsigned long lastloopmillis = millis();
+INT8U can_rv = CAN_FAIL;
 
 void loop() {
+	//Serial.println(iloop);
 	Engine.sensor.status = OK;
 	  Engine.sensor.map = ManifoldAbsolutePressurehPa(analogRead(MAP_PIN));
-	  getCan242(idelay/2, can242);
-	  getCan245(idelay/2, can245);
-	
+
+	  if (can_rv != CAN_OK) {
+		  //Serial.println("CAN_begin() called");
+		  can_rv=CAN_BeginMaster();
+		  if (can_rv != CAN_OK) {
+			  Serial.print("CAN_BeginMaster() can_rv=");
+			  Serial.println(can_rv);
+			  delay(500);
+		  }
+	  }
+	  if (can_rv == CAN_OK) {
+		  can_rv = getCan242(200, can242);
+		  can_rv = getCan245(150, can245);
+		  Engine.sensor.nmot100 = can242.nmot /(4*100);
+		  Engine.sensor.Tmot = can245.Tmot;
+	  }
 	 
+
     if(Engine.sensor.map < 1400){
       analogWrite(N75,0);
     }
@@ -252,31 +291,17 @@ void loop() {
     if(Engine.sensor.map > maxMAP){
       
     }
-	  Engine.sensor.iatl=AirThermistor(analogRead(AIRL_PIN));       // read ADC and  convert it to Celsius
-	  Engine.sensor.iatr = AirThermistor(analogRead(AIRR_PIN));       // read ADC and  convert it to Celsius
+	  Engine.sensor.iatl=(int)AirThermistor(analogRead(AIRL_PIN));       // read ADC and  convert it to Celsius
+	  Engine.sensor.iatr = (int) AirThermistor(analogRead(AIRR_PIN));       // read ADC and  convert it to Celsius
 	  Engine.sensor.map=(int)ManifoldAbsolutePressurehPa(analogRead(MAP_PIN));
-	  Engine.sensor.iatbeforeIC = AirThermistor(analogRead(AIRBEFOREIC_PIN));
-	  Engine.sensor.lambdaplus100=(byte) (100+LAMBDA1.Lambda());
-	 // Engine.sensor.lambdaplus100 = random(-9+100,-1+100);
-	  alambda = AnalogLambda(analogRead(LA_PIN));
-	 
-		
-/*	  if (true) {
-			Engine.sensor.lambda = random(85, 102);
-			Engine.sensor.map=random(400,1700);
-			Engine.sensor.lambda=random(68,120);
-			Engine.sensor.iatl=36;
-			Engine.sensor.iatr=34;
-			Engine.sensor.iatbeforeIC=58;
-	  }
-	  */
-	 
-     
+	  Engine.sensor.iatbeforeIC = (int)AirThermistor(analogRead(AIRBEFOREIC_PIN));
+	  Engine.sensor.lambdaplus100 = (byte)(100 + LAMBDA1.Lambda());
 #ifdef LAMBDA2SERIAL
-	  Engine.sensor.llambdaplus100 = (byte) (100+LAMBDA2.Lambda());
+	  Engine.sensor.llambdaplus100 = (byte)(100 + LAMBDA2.Lambda());
 #endif
+
 	  boolean btrack=false;
-      
+    
        ftr=fTrackUse(mil,Engine.sensor.egtl,Engine.sensor.egtr, Engine.sensor.map);
        if(ftr>0.25) {btrack=true;}
            
@@ -285,13 +310,17 @@ void loop() {
 	  if (can242.nmot/4 < 500) Engine.sensor.gearboxoilpump = 0;
 	  digitalWrite(GBOXOILPUMP_PIN, Engine.sensor.gearboxoilpump);
 	  WaterPumpIC.Update();
-	  Engine.sensor.llambdaplus100 = 170; // we display higher value and llamb is not used
-	  if (sendCan()!=CAN_OK) {
-		  CAN_Begin();
-		  delay(1000);
+	  if (can_rv == CAN_OK) {
+		  can_rv = sendBothPrivateCan(Engine);
+		
 	  }
-	  ReadEGTs(); 
-	  PrintlnDataSerial(Engine.sensor,can242,can245);
+	 ReadEGTs(); 
+	 PrintlnDataSerial(Engine.sensor,can242,can245);
+	 
+	  unsigned long looptime = millis() - lastloopmillis;
+	  
+	  if (looptime < MINLOOPIME) delay(MINLOOPIME - looptime);
+	  lastloopmillis = millis();
       iloop++;
    
 }

@@ -1,4 +1,9 @@
-#include <EngineMsmt.h>
+
+
+#define NO_PRINTLNDATASERIAL
+//#define DEBUGSERIAL Serial
+#define SERIOUSERROR Serial
+
 #include <Can997.h>
 #include <BreitBandLambda.h>
 #include <Goldelox_Serial_4DLib.h>
@@ -10,8 +15,7 @@
 #include <VacuumPump.h>
 
 
-//#define DEBUGSERIAL Serial
-#define SERIOUSERROR Serial
+
 
 void Callback(int ErrCode, unsigned char ErrByte);
 CaymanDisplay disp(8,9,Callback);
@@ -62,6 +66,14 @@ void Callback(int ErrCode, unsigned char ErrByte)
   }
 #ifdef  SERIOUSERROR
   SERIOUSERROR.println(line);
+  
+  Serial.print("cpos[line,column]=");
+  Serial.print(disp.cpy);
+  Serial.print(",");
+  Serial.print(disp.cpx);
+  Serial.print(",char=");
+  Serial.println(disp.c[disp.cpy][disp.cpx]);
+
 #endif
   disp.Error(line);
   nharderror++;
@@ -74,7 +86,6 @@ void Callback(int ErrCode, unsigned char ErrByte)
   }
  
 }
-
 
 unsigned long startupmill=1; 
 void setup() {
@@ -97,7 +108,7 @@ void setup() {
   EngineMsmtU_Zero();
   disp.init();
   startupmill = millis();
- //disp.Error("abcdefghijklmnopqrstuvwxyz0123456789");
+  //disp.Error("abcdefghijklmnopqrstuvwxyz0123456789");
 }
 
 float boost = 0;
@@ -108,95 +119,70 @@ bool EngineNeverStarted=true;
 unsigned long dmil=0;
 unsigned long last_millis = millis();
 unsigned long mil = 0;
+
+
+#ifndef NO_PRINTLNDATASERIAL
 MOTOR_1 can242;
 MOTOR_2 can245;
+#endif
 
 int iloop = 0;
+byte can_result = CAN_FAIL;
 void loop() {
   
-  byte can_result = CAN_OK;
-  can_result = getCANDataPrivate(100, Engine); 
+  
+  
   if (can_result != CAN_OK) {
-	  can_result = CAN_Begin();
-	  delay(500);
+      Serial.println("CAN_BeginSlave()");
+      can_result = CAN_BeginSlave();
+      delay(500);
+      //if (MCP2515_FAIL == can_result) resetarduino();
   }
-  else {
-	  can_result = getCan242(50, can242);
-	  can_result = getCan245(50, can245);
-  }
-
- 
   
+  if (can_result == CAN_OK) can_result = getCANDataPrivate(350, Engine);
   iloop++;
-  
   boost = ((float) Engine.sensor.map) / checksequence.pressurehPa - 1.0f;
   //Engine.sensor.lambdaplus100 = (byte)((int)random(-9 + 100, 230));
   //Engine.sensor.egtl = random(900, 1100);
   //Engine.sensor.egtr = Engine.sensor.egtl + random(-100, 100);
-  //boost=random(900, 1200) / 1000.0f
+  //boost = random(900, 1200) / 1000.0f;
   disp.UpdateError();
-
-  #ifdef DEBUGSERIAL
-  if (iloop % 50 == 0) {
-	  DEBUGSERIAL.print("iloop=");
-	  DEBUGSERIAL.println(iloop);
-  }
-#endif
-      mil=millis();
-    
-      Head.settings.rpm = can242.nmot/4;
-    //Head.settings.rpm = random(700, 900);
-     
-      if(Head.settings.rpm>500) {
-           EngineNeverStarted=false;
-       }
-    
-    
-    if((mil>startupmill+1000*15) && EngineNeverStarted==true && checksequence.ChecksequenceStep==-1){
+  mil=millis();
+  if(Engine.sensor.nmot100 * 100>500) {
+       EngineNeverStarted=false;
+   }
+   if((mil>startupmill+1000*15) && EngineNeverStarted==true && checksequence.ChecksequenceStep==-1){
       // we start check sequence only when not started for 5 seconds
          checksequence.ChecksequenceStep=0;
-       }
-    checksequence.Continue(mil, Engine.sensor.map);
-      
-    Head.settings.waterinjection=false;
-      if(boost>0.45 && Engine.sensor.iatl>58 &&  (Engine.sensor.egtl> 700 || Engine.sensor.egtr>700)) {
+   }
+   checksequence.Continue(mil, Engine.sensor.map);
+   Head.settings.waterinjection=false;
+  if(boost>0.45 && Engine.sensor.iatl>58 &&  (Engine.sensor.egtl> 700 || Engine.sensor.egtr>700)) {
         Head.settings.waterinjection=true;
-      }
-     else if (boost>0.15 &&  (Engine.sensor.egtl> 880 || Engine.sensor.egtr>880)){
+  }
+  else if (boost>0.15 &&  (Engine.sensor.egtl> 880 || Engine.sensor.egtr>880)){
           Head.settings.waterinjection=true;
-     }
-     else if(Engine.sensor.iatl>80 &&  boost>-0.1 && (Engine.sensor.egtl> 700 || Engine.sensor.egtr>700)) {
-          Head.settings.waterinjection=true;
-     }
-     if(Head.settings.rpm<3000 && Engine.sensor.iatl<80) Head.settings.waterinjection=false;
-     if(Head.settings.rpm<2200) Head.settings.waterinjection=false;
-     
-   
-   if(Head.settings.rpm>300) {
+  }
+  else if(Engine.sensor.iatl>80 &&  boost>-0.1 && (Engine.sensor.egtl> 700 || Engine.sensor.egtr>700)) {
+      Head.settings.waterinjection=true;
+  }
+  if(Engine.sensor.nmot100*100<3000 && Engine.sensor.iatl<80) Head.settings.waterinjection=false;
+  if(Engine.sensor.nmot100 * 100<2200) Head.settings.waterinjection=false;
+  if(Engine.sensor.nmot100 * 100>300) {
      digitalWrite(WATER_INJECT_VALVE_PIN, Head.settings.waterinjection == true ? HIGH : LOW);
      if (Head.settings.waterinjection) vacuumpump.Start(mil);
      else vacuumpump.Stop();
-     digitalWrite(OILPUMP_PIN, EngOilTemp(can245) > 120 ? HIGH : LOW);
-   }
-   vacuumpump.Update(mil);
-   Head.settings.oilpump = digitalRead(OILPUMPIN_PIN);
-  
+     digitalWrite(OILPUMP_PIN, EngOilTemp(Engine.sensor.Tmot) > 120 ? HIGH : LOW);
+  }
+  vacuumpump.Update(mil);
+  Head.settings.oilpump = digitalRead(OILPUMPIN_PIN);
   disp.EGT(Engine.sensor.egtl, Engine.sensor.egtr, (int)Engine.sensor.EGT_Status_left, (int)Engine.sensor.EGT_Status_right);
   disp.Boost(boost);
-
-
-#ifdef DEBUGSERIAL_2
-   DEBUGSERIAL.print("lambdaplus100=");
-   DEBUGSERIAL.print(Engine.sensor.lambdaplus100);
-   DEBUGSERIAL.print(" ,");
-   DEBUGSERIAL.println(((float)Engine.sensor.llambdaplus100 ) / 100.0f);
-#endif
-
-   disp.Lambda( Engine.sensor.lambdaplus100-100,Engine.sensor.llambdaplus100-100);
-   int iathigher = Engine.sensor.iatl;
-   if (Engine.sensor.iatr > iathigher) iathigher = Engine.sensor.iatr;
-   int iatdiff = abs(Engine.sensor.iatl - Engine.sensor.iatr);
-   if (iatdiff > 15) {
+  disp.Lambda( Engine.sensor.lambdaplus100-100,Engine.sensor.llambdaplus100-100);
+  int iathigher = Engine.sensor.iatl;
+  if (Engine.sensor.iatr > iathigher) iathigher = Engine.sensor.iatr;
+  int iatdiff = abs(Engine.sensor.iatl - Engine.sensor.iatr);
+  if (iatdiff > 15) {
       line.begin();
       if (Engine.sensor.iatr == iathigher) line.print("iat L");
       else line.print("iat R");
@@ -204,9 +190,9 @@ void loop() {
       line.print(iatdiff);
       line.print(")");
       disp.Error(line);
-   }
-   disp.IntakeTemp(iathigher, Head.settings.waterinjection);
-   disp.Pumps(Head.settings.oilpump != 0, Engine.sensor.gearboxoilpump);
+  }
+  disp.IntakeTemp(iathigher, Head.settings.waterinjection);
+  disp.Pumps(Head.settings.oilpump != 0, Engine.sensor.gearboxoilpump);
 #ifndef NO_PRINTLNDATASERIAL
    PrintlnDataSerial(Engine.sensor,can242,can245);
 #endif

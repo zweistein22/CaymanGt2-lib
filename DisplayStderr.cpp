@@ -1,3 +1,4 @@
+#include <Arduino.h>
 #include "DisplayStderr.h"
 
 
@@ -9,6 +10,8 @@ void DisplayStderr::println(const char *err) {
 }
 
 void DisplayStderr::print(const char *err) {
-	if (fpstderr != 0) (*fpstderr)(err);
+
+	if (fpstderr != 0) 	(*fpstderr)(err);
+
 }
 DisplayStderr STDERR;

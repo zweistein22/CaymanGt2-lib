@@ -28,15 +28,18 @@ public:
 	Goldelox_Serial_4DLib Display;
 private:
 	bool SetTxtFGColor(word fgc);
+	void MoveCursor(int cy, int cx);
 	void FastPrint(char *txt, int cy, int cx, word txtcolor);
-	char c[LINES_MAXY][LINE_WIDTH];
-	word ccol[LINES_MAXY][LINE_WIDTH];
+public:
+	char c[LINES_MAXY][LINE_WIDTH+1];
+	word ccol[LINES_MAXY][LINE_WIDTH+1];
 	unsigned long lasterrortime;
 	int fontwidth;
 	int fontheight;
 	int cpx;
 	int cpy;
 	word tfgcolor;
+private:
 	void SetFontSize(int w, int h);
 };
 
