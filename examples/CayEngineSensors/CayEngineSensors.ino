@@ -1,12 +1,12 @@
 #define LAMBDASERIAL Serial2
 #define LAMBDA2SERIAL Serial3
-#define DEBUGSERIAL Serial
+//#define DEBUGSERIAL Serial
 #include <BreitBandLambda.h>
 #include <PString.h>
 #include <Adafruit_MAX31855.h>
 #include <Can997.h>
 
-#define INFOSERIAL Serial
+//#define INFOSERIAL Serial
 
 
 int EGTL_PIN_CLK = 52;
@@ -261,6 +261,7 @@ int iloop=0;
 #define MINLOOPIME 100
 unsigned long lastloopmillis = millis();
 INT8U can_rv = CAN_FAIL;
+INT8U can1_rv = CAN_FAIL;
 
 void loop() {
 	//Serial.println(iloop);
@@ -269,16 +270,16 @@ void loop() {
 
 	  if (can_rv != CAN_OK) {
 		  //Serial.println("CAN_begin() called");
-		  can_rv=CAN_BeginMaster();
+		  can_rv=CAN0_BeginMaster();
 		  if (can_rv != CAN_OK) {
-			  Serial.print("CAN_BeginMaster() can_rv=");
+			  Serial.print("CAN0_BeginMaster() can_rv=");
 			  Serial.println(can_rv);
-			  delay(500);
+			  
 		  }
 	  }
 	  if (can_rv == CAN_OK) {
-		  can_rv = getCan242(200, can242);
-		  can_rv = getCan245(150, can245);
+		  can_rv = CAN0_get242(200, can242);
+		  can_rv = CAN0_get245(150, can245);
 		  Engine.sensor.nmot100 = can242.nmot /(4*100);
 		  Engine.sensor.Tmot = can245.Tmot;
 	  }
@@ -310,10 +311,18 @@ void loop() {
 	  if (can242.nmot/4 < 500) Engine.sensor.gearboxoilpump = 0;
 	  digitalWrite(GBOXOILPUMP_PIN, Engine.sensor.gearboxoilpump);
 	  WaterPumpIC.Update();
-	  if (can_rv == CAN_OK) {
-		  can_rv = sendBothPrivateCan(Engine);
-		
+
+	  if (can1_rv != CAN_OK) {
+		  //Serial.println("CAN_begin() called");
+		  can1_rv = CAN1_BeginMaster();
+		  if (can1_rv != CAN_OK) {
+			  Serial.print("CAN1_BeginMaster() can1_rv=");
+			  Serial.println(can1_rv);
+			 // delay(500);
+		  }
 	  }
+	  if (can1_rv == CAN_OK)   can1_rv = CAN1_sendbothPrivate(Engine);
+
 	 ReadEGTs(); 
 	 PrintlnDataSerial(Engine.sensor,can242,can245);
 	 

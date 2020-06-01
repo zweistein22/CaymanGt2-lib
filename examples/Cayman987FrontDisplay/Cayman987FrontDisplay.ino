@@ -133,13 +133,13 @@ void loop() {
   
   
   if (can_result != CAN_OK) {
-      Serial.println("CAN_BeginSlave()");
-      can_result = CAN_BeginSlave();
+      Serial.println("CAN0_BeginSlave()");
+      can_result = CAN0_BeginSlave();
       delay(500);
       //if (MCP2515_FAIL == can_result) resetarduino();
   }
   
-  if (can_result == CAN_OK) can_result = getCANDataPrivate(350, Engine);
+  if (can_result == CAN_OK) can_result = CAN0_getbothPrivate(800, Engine);
   iloop++;
   boost = ((float) Engine.sensor.map) / checksequence.pressurehPa - 1.0f;
   //Engine.sensor.lambdaplus100 = (byte)((int)random(-9 + 100, 230));
