@@ -10,7 +10,7 @@
 #define MAXERRSTR 40
 char _lasterror[MAXERRSTR+1];
 bool bshowerror = true;
-//#define DEBUGSERIAL Serial
+#define DEBUGSERIAL Serial
 const int fontw=2;
 const int fonth=3;
 
@@ -265,6 +265,10 @@ void CaymanDisplay::Error(const char *err){
 	int i=0;
 	if (err == nullptr || *err == 0) {
 		bshowerror=false;
+#ifdef DEBUGSERIAL
+		DEBUGSERIAL.println("err=0");
+#endif
+
 		return;
 	}
 	unsigned long m=millis();
@@ -282,6 +286,11 @@ void CaymanDisplay::Error(const char *err){
 				bshowerror = true;
 			}
 			else bshowerror = false;
+#ifdef DEBUGSERIAL
+			DEBUGSERIAL.print("issame==true, bshowerror=");
+			DEBUGSERIAL.println(bshowerror);
+
+#endif
 			return;
 		}
 	}
@@ -293,6 +302,12 @@ void CaymanDisplay::Error(const char *err){
 	}
 	_lasterror[i+1]=0;
 	lasterrortime=millis();
+#ifdef DEBUGSERIAL
+	DEBUGSERIAL.print("CaymanDisplay::Error(");
+	DEBUGSERIAL.print(_lasterror);
+	DEBUGSERIAL.print(")");
+
+#endif
 }
 
 

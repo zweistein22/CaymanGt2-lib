@@ -37,8 +37,13 @@ public:
 		pvacuumpump = &_vac;
 		float pressure = 0;
 		EEPROM_readAnything(0, pressure);
-		if (isnan(pressure)) pressurehPa = DEFPRESSURE;
-		if (pressure > 960 && pressure < 1050) pressurehPa = pressure;
+		if (isnan(pressure)) {
+#ifdef SERIOUSERROR
+			SERIOUSERROR.println("error reading pressure from EEPROM");
+#endif
+			pressurehPa = DEFPRESSURE;
+		}
+		if (pressure > 800 && pressure < 1100) pressurehPa = pressure;
 	}
 	void Reset();
 	void Continue(unsigned long mil, float __map);
@@ -48,8 +53,8 @@ private:
 	fpLogError le;
 	HeadU * pHead;
 	VacuumPump *pvacuumpump;
-	unsigned long RunTestMillis[3] = { 1000 * 3,1000 * 3,1000 * 3 };
-	unsigned long Pause = 2000;
+	unsigned long RunTestMillis[3] = { 1000 * 3,1000 * 3,1000 * 5 };
+	unsigned long Pause = 4000;
 	unsigned long CheckEnd = 0;
 	bool StepStarted = false;
 	bool StepStopped = false;

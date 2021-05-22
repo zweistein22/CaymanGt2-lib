@@ -2,8 +2,6 @@
 #include "CheckSequence.h"
 
 
-
-
 void CheckSequence::Reset() {
 	ChecksequenceStep = 3;
 	CheckEnd = 0;
@@ -61,6 +59,7 @@ void CheckSequence::Continue(unsigned long mil, float __map) {
 		break;
 	case 3:
 		if (mil > CheckEnd - Pause && !StepStopped) {
+
 			(*le)("");
 			pHead->settings.oilpump = 0;
 			digitalWrite(OILPUMP_PIN, LOW);
@@ -68,7 +67,7 @@ void CheckSequence::Continue(unsigned long mil, float __map) {
 		}
 		else {
 			if (!StepStarted) {
-				if (__map > 920 && __map < 1050) {
+				if (__map > 800 && __map < 1100) {
 					EEPROM_writeAnything(0, __map);
 					pressurehPa = __map;
 				}
