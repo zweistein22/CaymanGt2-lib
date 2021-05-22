@@ -21,7 +21,7 @@ namespace vntlda {
 #define MAP_AXIS_RAW 0x0
 #define MAP_AXIS_EGT 0xAE
 
-#define EXEC_DELAY 50 //ms
+
 #define MAP_DELAY 10 //ms
 #define PIDControlRatio 300
 
@@ -29,16 +29,18 @@ namespace vntlda {
 #define OPTIONS_VNTOUTPUTINVERTED 2
 
 #define EGT_COOL 165
-#define EGT_WARN 700
-#define EGT_ALARM 775
+#define EGT_WARN 930
+#define EGT_ALARM 960
 #define EGT_MAX_READ 1101
 
 #define IDLE_MAX_RPM 1150
-#define MIN_BOOST_SPOOLED 10 // kPa
+#define MIN_BOOST_SPOOLED 1100 // kPa
 #define PID_CUT_IN 1520 // rpm
 #define TPS_CUT_IN 18 // ~ 7%
 
 
+
+unsigned int EXEC_DELAY = 0; 
 const unsigned char versionString[] PROGMEM = "DMN-Vanbcguy Boost Ctrl v3.2.3";
 
 unsigned char auxMap[] = {
@@ -55,45 +57,50 @@ unsigned char auxMap[] = {
   00, 00, 00,                // lastX,lastY,lastRet
 };
 
+
+
 	unsigned char boostRequest[] = {
   'M', '2', 'D',
   0xC, 0xB, MAP_AXIS_RPM, MAP_AXIS_TPS, MAP_AXIS_KPA, // 01 - new version
-  0, 0, 0, 15, 34, 44, 46, 46, 46, 43, 39, 37,
-  0, 5, 15, 27, 38, 49, 51, 51, 51, 48, 43, 41,
-  0, 5, 20, 32, 42, 54, 57, 57, 57, 53, 48, 45,
-  0, 5, 20, 40, 55, 60, 63, 63, 63, 59, 53, 50,
-  0, 5, 22, 43, 60, 67, 70, 70, 70, 65, 59, 55,
-  0, 5, 24, 47, 65, 74, 78, 78, 78, 72, 66, 61,
-  0, 6, 27, 58, 75, 92, 98, 98, 98, 90, 83, 76,
-  0, 7, 30, 70, 92, 110, 123, 123, 123, 113, 104, 95,
-  0, 9, 33, 75, 112, 138, 154, 154, 154, 141, 130, 119,
-  0, 11, 41, 87, 128, 173, 193, 193, 193, 176, 162, 149,
-  0, 12, 45, 85, 145, 192, 214, 214, 214, 195, 180, 166,
+  100, 100, 100,100, 100, 100, 100, 100, 100, 100,100,100,
+  100, 100, 100,100, 100, 100, 100, 100, 100, 100,100,100,
+  100, 100, 100,100, 100, 100, 100, 100, 100, 100,100,100,
+  100, 100, 100,100, 100, 100, 100, 100, 100, 100,100,100,
+  100, 100, 100,100, 100, 100, 100, 100, 100, 100,100,100,
+  100, 100, 100,100, 100, 100, 100, 100, 100, 100,100,100,
+  100, 100, 100,100, 100, 100, 100, 100, 100, 100,100,100,
+  100, 100, 100,100, 100, 100, 100, 100, 100, 100,100,100,
+  100, 109, 133,175, 110, 120, 130, 140, 150, 150,150, 150,
+  150, 159, 150,170, 170, 170, 190, 190, 190, 190,195, 200,
+  160, 170, 180, 180,180, 180, 190, 190, 195, 200, 205,210,
   00, 00, 00,                // lastX,lastY,lastRet
 	};
 
 	unsigned char boostDCMax[] = {
   'M', '2', 'D',
   0x8, 0xB, MAP_AXIS_RPM, MAP_AXIS_TPS, MAP_AXIS_DUTY_CYCLE,
-  0, 204, 204, 180, 155, 140, 120, 70,
-  0, 204, 204, 180, 155, 140, 120, 70,
-  0, 204, 204, 175, 155, 140, 120, 70,
-  0, 204, 190, 160, 135, 130, 120, 70,
-  0, 204, 185, 160, 135, 130, 120, 70,
-  0, 204, 180, 160, 135, 130, 120, 70,
-  0, 204, 180, 155, 135, 130, 120, 70,
-  0, 204, 175, 150, 135, 130, 120, 70,
-  0, 204, 175, 145, 135, 125, 120, 70,
-  0, 204, 180, 145, 135, 125, 120, 70,
-  0, 204, 185, 145, 135, 125, 120, 70,
+  
+  0, 125, 185, 220, 240, 240, 240, 240,
+  0, 125, 185, 220, 240, 240, 240, 240,
+  0, 125, 185, 220, 240, 240, 240, 240,
+  0, 125, 185, 220, 240, 240, 240, 240,
+  0, 125, 185, 220, 240, 240, 240, 240,
+  0, 125, 185, 220, 240, 240, 240, 240,
+  0, 125, 185, 220, 240, 240, 240, 240,
+  0, 125, 185, 220, 240, 240, 240, 240,
+  0, 125, 185, 230, 255, 255, 255, 255,
+  0, 125, 185, 230, 255, 255, 255, 255,
+  0, 125, 185, 230, 255, 255, 255, 255,
+
+  
   00, 00, 00,                // lastX,lastY,lastRet
 	};
 
 	unsigned char boostDCMin[] = {
 	  'M', '2', 'D',
 	  0x9, 0xB, MAP_AXIS_RPM, MAP_AXIS_TPS, MAP_AXIS_DUTY_CYCLE,
-	  0, 50, 50, 50, 50, 50, 50, 50, 50,
-	  0, 121, 110, 100, 91, 83, 75, 68, 50,
+	  0, 0, 0, 0, 0, 50, 50, 50, 50,
+	  0, 50, 50, 50, 91, 83, 75, 68, 50,
 	  0, 121, 110, 100, 91, 83, 75, 68, 50,
 	  0, 121, 110, 100, 91, 83, 75, 68, 50,
 	  0, 110, 100, 91, 83, 75, 68, 62, 50,
@@ -102,24 +109,24 @@ unsigned char auxMap[] = {
 	  0, 99, 90, 70, 70, 70, 70, 65, 50,
 	  0, 99, 90, 70, 70, 70, 70, 65, 50,
 	  0, 99, 90, 70, 70, 70, 70, 65, 50,
-	  0, 99, 90, 70, 70, 70, 70, 65, 50,
+    0, 99, 90, 70, 70, 70, 70, 65, 50,
 	  00, 00, 00,                // lastX,lastY,lastRet
 	};
 
 	unsigned char n75precontrolMap[] = {
 	  'M', '2', 'D',
 	  0xC, 0xB, MAP_AXIS_RPM, MAP_AXIS_TPS, MAP_AXIS_DUTY_CYCLE,
-	  0, 90, 90, 110, 110, 100, 90, 75, 62, 50, 50, 50,
-	  0, 204, 204, 204, 182, 163, 145, 130, 122, 115, 106, 70,
-	  0, 204, 204, 198, 165, 148, 137, 126, 118, 112, 102, 70,
-	  0, 204, 204, 176, 160, 142, 130, 117, 107, 102, 95, 70,
-	  0, 204, 204, 145, 124, 115, 109, 101, 94, 87, 82, 70,
-	  0, 204, 204, 145, 115, 112, 104, 94, 90, 85, 78, 70,
-	  0, 204, 204, 132, 111, 109, 103, 94, 87, 80, 76, 70,
-	  0, 204, 204, 132, 110, 108, 102, 94, 86, 80, 76, 70,
-	  0, 204, 204, 138, 107, 103, 98, 91, 85, 80, 76, 70,
-	  0, 204, 204, 142, 128, 119, 110, 103, 97, 89, 82, 70,
-	  0, 204, 204, 160, 150, 140, 132, 121, 110, 98, 86, 70,
+	 0, 125, 130, 130, 130, 130, 130, 130, 130, 130, 130, 130,
+   0, 125, 150, 180, 180, 180, 180, 180, 180, 180, 180, 180,
+   0, 125, 150, 180, 180, 180, 180, 180, 180, 180, 180, 180,
+   0, 125, 150, 180, 180, 180, 180, 180, 180, 180, 180, 180,
+   0, 125, 150, 180, 180, 180, 180, 180, 180, 180, 180, 180,
+   0, 125, 150, 180, 180, 180, 180, 180, 180, 180, 180, 180,
+   0, 125, 150, 180, 180, 180, 180, 180, 180, 180, 180, 180,
+   0, 125, 150, 180, 180, 180, 180, 180, 180, 180, 180, 180,
+   0, 125, 150, 180, 180, 180, 180, 180, 180, 220, 220, 222,
+   0, 125, 150, 210, 210, 210, 210, 220, 220, 245, 245, 245,
+   0, 125, 150, 210, 230, 230, 230, 240, 240, 255, 255, 255,
 	  00, 00, 00,              // lastX,lastY,lastRet
 	};
 
@@ -195,6 +202,18 @@ unsigned char auxMap[] = {
 	// set up VNT PID control
 	PID vntPid(&controls.mapCorrected, &controls.pidOutput, &controls.vntTargetPressure, Kp, Ki, Kd, P_ON_E, DIRECT);
 
+ int  toRpm(int raw){
+  return round(((float)settings.rpmMax/255)* (float) raw);
+  
+ }
+
+ int toTps(int raw){
+    return int((float)raw/2.55);
+    
+ }
+
+
+
 
 	struct avgStruct {
 		unsigned char pos;
@@ -206,18 +225,7 @@ unsigned char auxMap[] = {
 
 	char buffer[100]; // general purpose buffer, mainly used for string storage when printing from flash
 	unsigned long lastPacketTime;
-	const unsigned char mapVisualitionHelp[] PROGMEM = "Top Left is 0,0 (press: L - toggle live mode)";
-
-	unsigned char page = 0;
-	const char* pages[] = {
-	  "About", "Adaptation", "Actuator Fine-tune", "Edit map: boostRequest", "Edit map: boostDCMin", "Edit map: boostDCMax", "Edit map: n75preControl", "Edit map: Aux. device PWM map", "Output Tests"
-	};
-
-	unsigned char* editorMaps[] = {
-	  boostRequest, boostDCMin, boostDCMax, n75precontrolMap, auxMap
-	};
-
-	
+		
 
 	void calcKp() {
 		Kp = (float)(settings.boostKp) / PIDControlRatio;
@@ -233,26 +241,30 @@ unsigned char auxMap[] = {
 
 	void loadDefaults() {
 		memset(&settings, 0, sizeof(settingsStruct));
-		settings.tpsMin = 85;
-		settings.tpsMax = 970;
-		settings.mapMin = 55;
-		settings.mapMax = 975;
-		settings.empMax = 1023;
-		settings.egtMax = 970;
+		settings.tpsMin = 0;
+		settings.tpsMax = 255;
+		settings.mapMin = 0;
+		settings.mapMax = 2550;
+		settings.empMax = 2550;
+		settings.egtMax = 1050;
 		settings.egtMin = 0;
 		settings.rpmTeethsPerRotation = 4;
 		settings.rpmMax = 6000;
-		settings.options = 0;
+		settings.options = 0;//OPTIONS_VANESOPENIDLE;//|OPTIONS_VNTOUTPUTINVERTED;
 		settings.boostKp = 220;
 		settings.boostKi = 7;
 		settings.boostKd = 15;
 	}
 
 	unsigned char mapValues(int raw, int mapMin, int mapMax) {
-		if (raw < mapMin)
-			return 0;
-		if (raw >= mapMax)
+		if (raw < mapMin)	return 0;
+		if (raw >= mapMax){
+      Serial.print("mapMax=");
+      Serial.println(mapMax);
+			Serial.print("raw=");
+      Serial.println(raw);
 			return 0xff;
+		}
 
 		return map(raw, mapMin, mapMax, 0, 255);
 	}
@@ -260,7 +272,6 @@ unsigned char auxMap[] = {
 	unsigned char mapValuesSqueeze(int raw, int mapMin, int mapMax) {
 		return map(raw, 0, 255, mapMin, mapMax);
 	}
-
 	unsigned char mapInterpolate(unsigned char p1, unsigned char p2, unsigned char pos) {
 		return (p1 * (100 - pos) + p2 * pos) / 100;
 	}
@@ -334,67 +345,7 @@ unsigned char auxMap[] = {
 		}
 	}
 
-	int EEPROMwriteData(int offset, byte* ptr, int size) {
-		int i;
-		for (i = 0; i < size; i++)
-			EEPROM.write(offset++, *(ptr++));
-		return i;
-	}
-
-	int EEPROMreadData(int offset, byte* ptr, int size) {
-		int i;
-		for (i = 0; i < size; i++)
-			*(ptr++) = EEPROM.read(offset++);
-		return i;
-	}
-
-	void saveToEEPROM() {
-		int ofs = 0;
-		// write magic header
-		strcpy_P(buffer, (PGM_P)&versionString);
-		ofs += EEPROMwriteData(0, (byte*)&buffer, strlen(buffer));
-		// write control struct
-		ofs += EEPROMwriteData(ofs, (byte*)&settings, sizeof(settingsStruct));
-
-		ofs += EEPROMwriteData(ofs, (byte*)&auxMap, sizeof(auxMap));
-		ofs += EEPROMwriteData(ofs, (byte*)&boostRequest, sizeof(boostRequest));
-		ofs += EEPROMwriteData(ofs, (byte*)&boostDCMin, sizeof(boostDCMin));
-		ofs += EEPROMwriteData(ofs, (byte*)&boostDCMax, sizeof(boostDCMax));
-		ofs += EEPROMwriteData(ofs, (byte*)&n75precontrolMap, sizeof(n75precontrolMap));
-
-		//printFromFlash(ANSIclearEolAndLf);
-		Serial.print(ofs, DEC);
-		Serial.print(F("SAVED "));
-		Serial.print(ofs);
-		Serial.print(F(" BYTES."));
-
-		delay(1000);
-	}
-
-	bool loadFromEEPROM(bool force) {
-		int ofs = 0;
-		// if reset pin is active, no not load anything from eeprom
-		
-		// Check magic header to prevent data corruption of blank board or wrong version save file
-		if (!force) {
-			strcpy_P(buffer, (PGM_P)&versionString);
-			for (ofs = 0; ofs < strlen(buffer); ofs++) {
-				if (EEPROM.read(ofs) != buffer[ofs])
-					return false;
-			}
-		}
-		ofs = strlen(buffer);
-		ofs += EEPROMreadData(ofs, (byte*)&settings, sizeof(settingsStruct));
-
-		ofs += EEPROMreadData(ofs, (byte*)&auxMap, sizeof(auxMap));
-		ofs += EEPROMreadData(ofs, (byte*)&boostRequest, sizeof(boostRequest));
-		ofs += EEPROMreadData(ofs, (byte*)&boostDCMin, sizeof(boostDCMin));
-		ofs += EEPROMreadData(ofs, (byte*)&boostDCMax, sizeof(boostDCMax));
-		ofs += EEPROMreadData(ofs, (byte*)&n75precontrolMap, sizeof(n75precontrolMap));
-
-		return true;
-	}
-
+	
 	int getFilteredAverage(struct avgStruct* a) {
 		int minVal = 0;
 		int maxVal = 255;
@@ -416,7 +367,52 @@ unsigned char auxMap[] = {
 
 	}
 
-	
+void PrintMap(unsigned char *mapData){
+ unsigned char tableSizeX = *(mapData + 3);
+ unsigned char tableSizeY = *(mapData + 4);
+ unsigned char axisTypeX = *(mapData + 5);
+ unsigned char axisTypeY = *(mapData + 6);
+ unsigned char axisTypeResult = *(mapData + 7);
+ unsigned char lastXpos = *(mapData + 8 + tableSizeX * tableSizeY);
+ unsigned char lastYpos = *(mapData + 8 + tableSizeX * tableSizeY + 1);
+ unsigned char lastValue = *(mapData + 8 + tableSizeX * tableSizeY + 2);
+ if(axisTypeX == MAP_AXIS_RPM){
+    Serial.print("\t");
+    for(int y = 0;y < tableSizeY; y++){
+        if(y == 0) {
+          for(int x = 0; x < tableSizeX;x++){
+            Serial.print((int)(((x+1) * (long)settings.rpmMax)/tableSizeX));
+            Serial.print("\t");
+          } 
+          Serial.print("rpm");
+          Serial.println("");
+        }
+        for(int x = 0; x < tableSizeX;x++){
+          if(x==0){
+            Serial.print("tp:");
+            Serial.print((y+1)*100/tableSizeY);
+            Serial.print("%");
+          }
+          Serial.print("\t");
+
+          unsigned char v =*(mapData + 8 + y*tableSizeX + x);
+                    
+          if(axisTypeResult == MAP_AXIS_KPA){
+            Serial.print((unsigned int)map(v,0,255, settings.mapMin, settings.mapMax));
+             //Serial.print((int) v);
+          }
+          if(axisTypeResult == MAP_AXIS_DUTY_CYCLE){
+             Serial.print((int) v);
+          }
+         
+        }
+        Serial.println("");
+    }
+ }
+}
+
+
+  
 	void determineIdle() {
 		if (controls.tpsCorrected > 0) {
 			controls.idling = false;
@@ -435,7 +431,16 @@ unsigned char auxMap[] = {
 		double maxControl;
 
 		double toControlVNT;
+    /*
+   Serial.print("controls.rpmActual=");
+   Serial.print(controls.rpmActual);
 
+   Serial.print("controls.mapInput=");
+   Serial.print(controls.mapInput);
+
+   Serial.print("controls.tpsInput=");
+   Serial.println(controls.tpsInput);
+   */
 		controls.rpmCorrected = mapValues(controls.rpmActual, 0, settings.rpmMax);
 		controls.mapCorrected = mapValues(controls.mapInput, settings.mapMin, settings.mapMax);
 		controls.tpsCorrected = mapValues(controls.tpsInput, settings.tpsMin, settings.tpsMax);
@@ -446,8 +451,11 @@ unsigned char auxMap[] = {
 		controls.n75precontrol = mapLookUp(n75precontrolMap, controls.rpmCorrected, controls.tpsCorrected);
 
 		/* Look up the requested boost */
+   
 		controls.vntTargetPressure = mapLookUp(boostRequest, controls.rpmCorrected, controls.tpsCorrected);
 
+ //   Serial.print("controls.n75precontrol=");
+ //  Serial.println(controls.n75precontrol);
 		/* This is the available span of our DC - we can only go between min and max */
 		minControl = controls.vntMinDc - controls.n75precontrol;  // this will be a negative number
 		maxControl = controls.vntMaxDc - controls.n75precontrol;  // this will be a positive number
@@ -467,7 +475,7 @@ unsigned char auxMap[] = {
 		if ((controls.idling)) {
 			// If we are at idle then we don't want any boost regardless of map
 
-			controls.vntTargetPressure = 0;                    // Display zero target pressure on the LCD at idle
+			controls.vntTargetPressure = 100;                    // Display zero target pressure on the LCD at idle
 			controls.mode = 0;                                 // System status = idling
 			controls.pidOutput = 0;
 
@@ -536,7 +544,9 @@ unsigned char auxMap[] = {
 		else {
 			controls.vntPositionRemapped = finalPos;
 		}
-
+  //  Serial.print("controls.vntPositionRemapped = ");
+  //  Serial.print(controls.vntPositionRemapped);
+  //  Serial.print("\r\n");
 		// Include the time we spent processing
 		controls.lastTime = millis();
 	}
@@ -556,17 +566,16 @@ unsigned char auxMap[] = {
 	unsigned long mapLoop = 0;
 
 	typedef struct  {
-		char nduty;
+		unsigned char nduty;
 		unsigned char wi;
 	} vntlda_data;
 
 	unsigned int execTimeRead = 0;
 	unsigned int execTimeAct = 0;
 
-	vntlda_data loop(unsigned short map, unsigned short rpm, char wpedal, short egt) {
-		vntlda_data data;
-		data.nduty = 0;
-		data.wi = 0;
+	void loop(vntlda_data & data, unsigned short map, unsigned short rpm, unsigned char wpedal, short egt) {
+		//data.nduty = 0;
+		//data.wi = 0;
 
 		if ((millis() - mapLoop) >= MAP_DELAY) {
 			controls.mapInput = map;
@@ -585,11 +594,8 @@ unsigned char auxMap[] = {
 
 			execTimeAct = millis();
 			// We will actually process our values and change actuators every EXEC_DELAY milliseconds
-			if (freezeModeEnabled) {
-				Serial.print(F("\rFREEZE "));
-			}
-			else {
-				// update output values according to input
+			
+			// update output values according to input
 				controls.rpmActual = rpm;
 				determineIdle();
 				controlVNT();
@@ -597,15 +603,17 @@ unsigned char auxMap[] = {
 				data.nduty = controls.vntPositionRemapped;
 				data.wi = controls.auxOutput;
 				
-			}
+		
 			execLoop = millis();
 			execTimeAct = execLoop - execTimeAct;
 		}
 
+  
+  
 	
 	}
 
-	void Init() {
+	void Init(int sampletime) {
 		//---------------------------------------------- Set PWM frequency for D2, D3 & D5 ---------------------------
 
 		//TCCR3B = TCCR3B & B11111000 | B00000001;    // set timer 3 divisor to     1 for PWM frequency of 31372.55 Hz
@@ -614,15 +622,22 @@ unsigned char auxMap[] = {
 		//TCCR3B = TCCR3B & B11111000 | B00000100;    // set timer 3 divisor to   256 for PWM frequency of   122.55 Hz
 		//TCCR3B = TCCR3B & B11111000 | B00000101;    // set timer 3 divisor to  1024 for PWM frequency of    30.64 Hz
 		  //---------------------------------------------- Set PWM frequency for D11 & D12 -----------------------------
+		EXEC_DELAY = sampletime;
+    
 		pwmfreq = 30.64;
-		maxMAP = 1950;
-		vntPid.SetSampleTime(100);
+		maxMAP = 2100;
+		vntPid.SetSampleTime(sampletime);
 		mapAvg.size = AVG_MAX;
-
+    loadDefaults();
 		//initial setup of kp/ki/kd
 		calcKp();
 		calcKi();
 		calcKd();
+    Serial.println("boostRequest");
+   PrintMap(boostRequest);
+   Serial.println("");
+   Serial.println("n75precontrolMap");
+   PrintMap(n75precontrolMap);
 
 	}
 
@@ -631,4 +646,3 @@ unsigned char auxMap[] = {
 
 
 #endif
-

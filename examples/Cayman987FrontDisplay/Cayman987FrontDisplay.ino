@@ -1,7 +1,7 @@
 
 
 #define NO_PRINTLNDATASERIAL
-//#define DEBUGSERIAL Serial
+#define DEBUGSERIAL Serial
 #define SERIOUSERROR Serial
 
 #include <Can997.h>
@@ -151,7 +151,7 @@ void loop() {
   if(Engine.sensor.nmot100 * 100>500) {
        EngineNeverStarted=false;
    }
-   if((mil>startupmill+1000*15) && EngineNeverStarted==true && checksequence.ChecksequenceStep==-1){
+   if((mil>startupmill+1000*2) && EngineNeverStarted==true && checksequence.ChecksequenceStep==-1){
       // we start check sequence only when not started for 5 seconds
          checksequence.ChecksequenceStep=0;
    }
