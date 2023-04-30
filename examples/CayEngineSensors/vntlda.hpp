@@ -22,7 +22,7 @@ namespace vntlda {
 #define MAP_AXIS_EGT 0xAE
 
 
-#define MAP_DELAY 10 //ms
+#define MAP_DELAY 0 //ms
 #define PIDControlRatio 300
 
 #define OPTIONS_VANESOPENIDLE 1
@@ -34,7 +34,7 @@ namespace vntlda {
 #define EGT_MAX_READ 1101
 
 #define IDLE_MAX_RPM 1150
-#define MIN_BOOST_SPOOLED 1100 // kPa
+#define MIN_BOOST_SPOOLED 1600 // kPa
 #define PID_CUT_IN 1520 // rpm
 #define TPS_CUT_IN 18 // ~ 7%
 
@@ -86,11 +86,11 @@ unsigned char auxMap[] = {
   0, 125, 185, 220, 240, 240, 240, 240,
   0, 125, 185, 220, 240, 240, 240, 240,
   0, 125, 185, 220, 240, 240, 240, 240,
-  0, 125, 185, 220, 240, 240, 240, 240,
-  0, 125, 185, 220, 240, 240, 240, 240,
-  0, 125, 185, 230, 255, 255, 255, 255,
-  0, 125, 185, 230, 255, 255, 255, 255,
-  0, 125, 185, 230, 255, 255, 255, 255,
+  0, 185, 185, 220, 240, 240, 240, 240,
+  0, 185, 185, 220, 240, 240, 240, 240,
+  0, 255, 255, 255, 255, 255, 255, 255,
+  0, 255, 255, 255, 255, 255, 255, 255,
+  0, 255, 255, 255, 255, 255, 255, 255,
 
   
   00, 00, 00,                // lastX,lastY,lastRet
@@ -123,10 +123,10 @@ unsigned char auxMap[] = {
    0, 125, 150, 180, 180, 180, 180, 180, 180, 180, 180, 180,
    0, 125, 150, 180, 180, 180, 180, 180, 180, 180, 180, 180,
    0, 125, 150, 180, 180, 180, 180, 180, 180, 180, 180, 180,
-   0, 125, 150, 180, 180, 180, 180, 180, 180, 180, 180, 180,
-   0, 125, 150, 180, 180, 180, 180, 180, 180, 220, 220, 222,
-   0, 125, 150, 210, 210, 210, 210, 220, 220, 245, 245, 245,
-   0, 125, 150, 210, 230, 230, 230, 240, 240, 255, 255, 255,
+   0, 160, 170, 180, 180, 180, 180, 180, 180, 180, 180, 180,
+   0, 170, 180, 180, 180, 180, 180, 180, 180, 220, 220, 222,
+   0, 180, 220, 230, 230, 230, 230, 240, 240, 245, 245, 245,
+   0, 180, 220, 230, 230, 230, 230, 240, 240, 255, 255, 255,
 	  00, 00, 00,              // lastX,lastY,lastRet
 	};
 
@@ -182,10 +182,8 @@ unsigned char auxMap[] = {
 		int mapMax;
 		int egtMin;
 		int egtMax;
-		int empMin;
-		int empMax;
 		int rpmMax;
-		int rpmTeethsPerRotation;
+		
 		unsigned char mode;
 		char options;
 		int boostKp;
@@ -243,13 +241,13 @@ unsigned char auxMap[] = {
 		memset(&settings, 0, sizeof(settingsStruct));
 		settings.tpsMin = 0;
 		settings.tpsMax = 255;
-		settings.mapMin = 0;
+		settings.mapMin = 1000;
 		settings.mapMax = 2550;
-		settings.empMax = 2550;
+
 		settings.egtMax = 1050;
 		settings.egtMin = 0;
-		settings.rpmTeethsPerRotation = 4;
-		settings.rpmMax = 6000;
+		
+		settings.rpmMax = 7000;
 		settings.options = 0;//OPTIONS_VANESOPENIDLE;//|OPTIONS_VNTOUTPUTINVERTED;
 		settings.boostKp = 220;
 		settings.boostKi = 7;
@@ -462,12 +460,14 @@ void PrintMap(unsigned char *mapData){
 
 		if (minControl > 0) {
 			// Our MinDC map is higher than our precontrol map; oops
+      Serial.println("Our MinDC map is higher than our precontrol map; oops");
 			minControl = 0;
 		}
 
 		if (maxControl < 0) {
 			// Our MaxDC map is lower than our precontrol map; oops
 			maxControl = 0;
+     Serial.println("Our MaxDC map is lower than our precontrol map; oops");
 		}
 
 		vntPid.SetOutputLimits(minControl, maxControl);
@@ -558,13 +558,7 @@ void PrintMap(unsigned char *mapData){
 	}
 
 	
-	bool freezeModeEnabled = false;
-
-	unsigned long serialLoop = 0;
-	unsigned long execLoop = 0;
-	unsigned long displayLoop = 0;
-	unsigned long mapLoop = 0;
-
+	
 	typedef struct  {
 		unsigned char nduty;
 		unsigned char wi;
@@ -576,52 +570,21 @@ void PrintMap(unsigned char *mapData){
 	void loop(vntlda_data & data, unsigned short map, unsigned short rpm, unsigned char wpedal, short egt) {
 		//data.nduty = 0;
 		//data.wi = 0;
-
-		if ((millis() - mapLoop) >= MAP_DELAY) {
-			controls.mapInput = map;
-			mapLoop = millis();
-		}
-
+    controls.mapInput = map;
+		
 		/* Actual execution will happen every EXEC_DELAY - this is where we do our actual calculations */
-		if ((millis() - execLoop) >= EXEC_DELAY) {
-
-
-			execTimeRead = millis();
 			controls.tpsInput = wpedal;
 			controls.temp1 = egt;
-			execTimeRead = millis() - execTimeRead;
-
-
-			execTimeAct = millis();
-			// We will actually process our values and change actuators every EXEC_DELAY milliseconds
-			
-			// update output values according to input
-				controls.rpmActual = rpm;
-				determineIdle();
-				controlVNT();
-				controls.temp1 = egt; 
-				data.nduty = controls.vntPositionRemapped;
-				data.wi = controls.auxOutput;
-				
-		
-			execLoop = millis();
-			execTimeAct = execLoop - execTimeAct;
-		}
-
-  
-  
-	
-	}
+		// update output values according to input
+			controls.rpmActual = rpm;
+			determineIdle();
+			controlVNT();
+			controls.temp1 = egt; 
+			data.nduty = controls.vntPositionRemapped;
+			data.wi = controls.auxOutput;
+}
 
 	void Init(int sampletime) {
-		//---------------------------------------------- Set PWM frequency for D2, D3 & D5 ---------------------------
-
-		//TCCR3B = TCCR3B & B11111000 | B00000001;    // set timer 3 divisor to     1 for PWM frequency of 31372.55 Hz
-		//TCCR3B = TCCR3B & B11111000 | B00000010;    // set timer 3 divisor to     8 for PWM frequency of  3921.16 Hz
-		//  TCCR3B = TCCR3B & B11111000 | B00000011;    // set timer 3 divisor to    64 for PWM frequency of   490.20 Hz
-		//TCCR3B = TCCR3B & B11111000 | B00000100;    // set timer 3 divisor to   256 for PWM frequency of   122.55 Hz
-		//TCCR3B = TCCR3B & B11111000 | B00000101;    // set timer 3 divisor to  1024 for PWM frequency of    30.64 Hz
-		  //---------------------------------------------- Set PWM frequency for D11 & D12 -----------------------------
 		EXEC_DELAY = sampletime;
     
 		pwmfreq = 30.64;

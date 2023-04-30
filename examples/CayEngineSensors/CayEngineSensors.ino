@@ -1,7 +1,7 @@
 #include <EEPROM.h>
 #include <ResponsiveAnalogRead.h>
 #include <PID_v1.h>
-//#define LAMBDASERIAL Serial3
+#define LAMBDASERIAL Serial3
 #define LAMBDA2SERIAL Serial2
 //#define DEBUGSERIAL Serial
 
@@ -12,7 +12,11 @@
 #include <Can997.h>
 #include "vntlda.hpp"
 
-#define MINLOOPIME 200  //ms better more than 140ms 
+#define MINLOOPIME 100  //ms better more than 140ms 
+
+#define SKIPREADEGTEACH 3
+
+
 unsigned int nduty;
 
 
@@ -112,6 +116,7 @@ float AirThermistor(int RawADC) {
 
 MOTOR_1 can242;
 MOTOR_2 can245;
+//BREMSE_1 can14A;
 
 class __WaterpumpsIC {
 
@@ -270,7 +275,7 @@ int rskip=0;
 void ReadEGTs() {
 	double tl, tr;
 
-  if(!(rskip++%2)) return;
+  if(!(rskip++%SKIPREADEGTEACH)) return;
 	tl = egt_left.readCelsius();
 	Engine.sensor.egtl = (int)tl;
 	// Engine.sensor.egtl=random(280,1030);
@@ -340,6 +345,7 @@ void loop() {
 	  if (can_rv == CAN_OK) {
 		  can_rv = CAN0_get242(200, can242);
 		  can_rv = CAN0_get245(150, can245);
+      //can_rv = CAN0_get14A(150,can14A);
 		  Engine.sensor.nmot100 = can242.nmot /(4*100);
 		  Engine.sensor.Tmot = can245.Tmot;
 	  }
@@ -426,8 +432,8 @@ void loop() {
 		  }
      else can1retry=0;
 	  }
-	  if (can1_rv == CAN_OK)   can1_rv = CAN1_sendbothPrivate(Engine);
-
+	  if (can1_rv == CAN_OK)  can1_rv = CAN1_sendbothPrivate(Engine);
+	    
 	 ReadEGTs(); 
 	 PrintlnDataSerial(Engine.sensor,can242,can245);
 	 unsigned long looptime = millis() - lastloopmillis;
