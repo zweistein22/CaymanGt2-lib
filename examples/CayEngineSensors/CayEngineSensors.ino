@@ -5,16 +5,18 @@
 #define LAMBDA2SERIAL Serial2
 //#define DEBUGSERIAL Serial
 
-#define INFOSERIAL Serial
+#define INFOSERIAL(call) Serial.call
+// or do deactivate  #define INFOSERIAL(call)
+
 #include <BreitBandLambda.h>
 #include <PString.h>
 #include <Adafruit_MAX31855.h>
 #include <Can997.h>
 #include "vntlda.hpp"
 
-#define MINLOOPIME 100  //ms better more than 140ms 
+#define MINLOOPIME 100  // MINIMUM: SKIPREADEGTEACH *  MINLOOPIME > 140 ms 
 
-#define SKIPREADEGTEACH 3
+#define SKIPREADEGTEACH 2
 
 
 unsigned int nduty;
@@ -129,9 +131,7 @@ public:
 	 bool init(int pin) {
 		 pinMode(pin, OUTPUT);
 		 digitalWrite(pin, started);
-#ifdef INFOSERIAL
-	    if(started)  INFOSERIAL.print("NTK WP started -1\n\r");
-#endif
+	    if(started)  INFOSERIAL(print("NTK WP started -1\n\r"));
 	}
 
 	 bool Update() {
@@ -140,13 +140,13 @@ public:
 			 if (max(Engine.sensor.iatl,Engine.sensor.iatr) < onabove - hysterese ) {
 				 digitalWrite(WATERPUMPS_PIN, LOW);
          		 started = false;
-#ifdef INFOSERIAL
-				 INFOSERIAL.print(Engine.sensor.iatl);
-				 INFOSERIAL.print(" (iatl),");
-				 INFOSERIAL.print(Engine.sensor.iatr);
-				 INFOSERIAL.print(" (iatr) :");
-				 INFOSERIAL.print("NTK WP stopped, \n\r");
-#endif
+
+				 INFOSERIAL(print(Engine.sensor.iatl));
+				 INFOSERIAL(print(" (iatl),"));
+				 INFOSERIAL(print(Engine.sensor.iatr));
+				 INFOSERIAL(print(" (iatr) :"));
+				 INFOSERIAL(print("NTK WP stopped, \n\r"));
+
 			 }
 
 			 if (can242.nmot == 0) {
@@ -154,9 +154,7 @@ public:
 
 				 if (millis() > lastnmot + maxnachlauf) {
 					 digitalWrite(WATERPUMPS_PIN, LOW);
-#ifdef INFOSERIAL
-					 INFOSERIAL.print("NTK WP stopped1\n\r");
-#endif
+					 INFOSERIAL(print("NTK WP stopped1\n\r"));
 					 started = false;
 				 }
 			 }
@@ -169,13 +167,13 @@ public:
 		 else {
 			 if (max(Engine.sensor.iatl, Engine.sensor.iatr) > (word)onabove && (can242.nmot / 4 > 500)) {
 				 digitalWrite(WATERPUMPS_PIN, HIGH);
-#ifdef INFOSERIAL
-				 INFOSERIAL.print(Engine.sensor.iatl);
-				 INFOSERIAL.print(" (iatl),");
-				 INFOSERIAL.print(Engine.sensor.iatr);
-				 INFOSERIAL.print(" (iatr) :");
-				 INFOSERIAL.print("NTK WP started, \n\r");
-#endif
+
+				 INFOSERIAL(print(Engine.sensor.iatl));
+				 INFOSERIAL(print(" (iatl),"));
+				 INFOSERIAL(print(Engine.sensor.iatr));
+				 INFOSERIAL(print(" (iatr) :"));
+				 INFOSERIAL(print("NTK WP started, \n\r"));
+
 				 started = true;
 			 }
 		 }
@@ -437,7 +435,9 @@ void loop() {
 	 ReadEGTs(); 
 	 PrintlnDataSerial(Engine.sensor,can242,can245);
 	 unsigned long looptime = millis() - lastloopmillis;
-	 if (looptime < MINLOOPIME) delay(MINLOOPIME - looptime);
+	 if (looptime < MINLOOPIME ) delay(MINLOOPIME - looptime);
+	 INFOSERIAL(print("looptime (ms) : "));
+	 INFOSERIAL(println(looptime));
 	 lastloopmillis = millis();
    iloop++;
    
