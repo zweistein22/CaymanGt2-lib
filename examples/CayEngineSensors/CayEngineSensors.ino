@@ -126,8 +126,9 @@ class __WaterpumpsIC {
 	int onabove = 53;
 	long maxnachlauf = 2*60*1000; // 5 min
 	long lastnmot = 0;
-	bool started = false;
+
 public:
+	bool started = false;
 	 bool init(int pin) {
 		 pinMode(pin, OUTPUT);
 		 digitalWrite(pin, started);
@@ -260,8 +261,12 @@ void setup() {
   Serial.begin(115200);
   Serial.println("CayEngineSensor.startup");
   vntlda::Init(MINLOOPIME);
-  delay(4000);
+
+  WaterPumpIC.started = true;
   WaterPumpIC.init(WATERPUMPS_PIN);
+
+  delay(4000);
+  
  // digitalWrite(LA_START, HIGH);
   setPwmFrequencyMEGA2560(N75,5);
 }

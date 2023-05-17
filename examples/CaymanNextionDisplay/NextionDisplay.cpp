@@ -19,7 +19,7 @@ PString error(_ebuffer, sizeof(_ebuffer));
 bool _rear = true;
 bool _front = true;
 
-#define AVERAGE 5
+#define AVERAGE 2
 RunningAverage egtl(AVERAGE);
 RunningAverage egtr(AVERAGE);
 RunningAverage iat(AVERAGE);
@@ -132,11 +132,11 @@ void NextionDisplay::EGT(int left, int right, int statusleft, int statusright){
      PString f(_fbuffer, sizeof(_fbuffer));
       bar.addValue((hpa));
 
-       Serial.print("hpa=");
-      Serial.println(bar.getAverage());
-      int ihpa = hpa*100;
-      Serial.print("ihpa=");
-      Serial.println(ihpa);
+      // Serial.print("hpa=");
+      //Serial.println(bar.getAverage());
+      int ihpa = bar.getAverage() *100;
+      //Serial.print("ihpa=");
+      //Serial.println(ihpa);
       _setNumber("boost",ihpa);
       
   }
