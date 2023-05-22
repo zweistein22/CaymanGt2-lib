@@ -91,7 +91,7 @@ __return:
 
 NextionDisplay::NextionDisplay(int tx, int rx){
 lasterrortime=millis();
-
+  Error("");
 
 }
 
@@ -196,14 +196,17 @@ void NextionDisplay::EGT(int left, int right, int statusleft, int statusright){
     Serial.print("get error=");
     Serial.println(error);
 
-    if(error==err){
+    if(!strcmp(err,error)){
       return;
     }    
     
     error.begin();
     error.print(err);   
     lasterrortime=millis(); 
-
+    disp.write("err.bco=");
+    disp.write(strlen(error)?"WHITE":"BLACK");         
+    disp.write(0xff);disp.write(0xff);disp.write(0xff);
+       
     disp.write("err.txt=\"");
     disp.write(err);
     disp.write("\"");

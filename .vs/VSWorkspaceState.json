@@ -2,8 +2,9 @@
   "ExpandedNodes": [
     "",
     "\\examples",
-    "\\examples\\CayEngineSensors"
+    "\\examples\\CayEngineSensors",
+    "\\examples\\CaymanNextionDisplay"
   ],
-  "SelectedNode": "\\examples\\CayEngineSensors\\CayEngineSensors.ino",
+  "SelectedNode": "\\examples\\CaymanNextionDisplay\\CaymanNextionDisplay.ino",
   "PreviewInSolutionExplorer": false
 }

@@ -80,17 +80,17 @@ unsigned char auxMap[] = {
   'M', '2', 'D',
   0x8, 0xB, MAP_AXIS_RPM, MAP_AXIS_TPS, MAP_AXIS_DUTY_CYCLE,
   
-  100, 125, 185, 220, 240, 240, 240, 240,
-  100, 125, 185, 220, 240, 240, 240, 240,
-  100, 125, 185, 220, 240, 240, 240, 240,
-  100, 125, 185, 220, 240, 240, 240, 240,
-  100, 125, 185, 220, 240, 240, 240, 240,
-  100, 125, 185, 220, 240, 240, 240, 240,
-  100, 185, 185, 220, 240, 240, 240, 240,
-  100, 185, 185, 220, 240, 240, 240, 240,
-  100, 255, 255, 255, 255, 255, 255, 255,
-  100, 255, 255, 255, 255, 255, 255, 255,
-  100, 255, 255, 255, 255, 255, 255, 255,
+  125, 135, 185, 220, 240, 240, 240, 240,
+  125, 135, 185, 220, 240, 240, 240, 240,
+  125, 135, 185, 220, 240, 240, 240, 240,
+  125, 135, 185, 220, 240, 240, 240, 240,
+  125, 135, 185, 220, 240, 240, 240, 240,
+  130, 135, 185, 220, 240, 240, 240, 240,
+  130, 185, 185, 220, 240, 240, 240, 240,
+  130, 185, 185, 220, 240, 240, 240, 240,
+  130, 255, 255, 255, 255, 255, 255, 255,
+  130, 255, 255, 255, 255, 255, 255, 255,
+  130, 255, 255, 255, 255, 255, 255, 255,
 
   
   00, 00, 00,                // lastX,lastY,lastRet
@@ -460,12 +460,17 @@ void PrintMap(unsigned char *mapData){
 
 		if (minControl > 0) {
 			// Our MinDC map is higher than our precontrol map; oops
+     
+      
 			Serial.print(controls.vntMinDc);
-            Serial.println(" : Our MinDC map is higher than our precontrol map; oops");
+      Serial.println(" : Our MinDC map is higher than our precontrol map; oops");
+      Serial.print(", n75precontrol=");
+      Serial.print(controls.n75precontrol);
+      
 			Serial.print("rpmCorrected=");
 			Serial.print(controls.rpmCorrected);
 			Serial.print(" ,tpsCorrected=");
-			Serial.println(controls.tpsCorrected);
+			Serial.print(controls.tpsCorrected);
 			Serial.print("rpmActual=");
 			Serial.print(controls.rpmActual);
 			Serial.print(" ,tpsInput=");
@@ -478,10 +483,12 @@ void PrintMap(unsigned char *mapData){
 			// Our MaxDC map is lower than our precontrol map; oops
 			Serial.print(controls.vntMaxDc);
 			Serial.println(" : Our MaxDC map is lower than our precontrol map; oops");
-			Serial.print("rpmCorrected=");
+       Serial.print("n75precontrol=");
+      Serial.print(controls.n75precontrol);
+			Serial.print(", rpmCorrected=");
 			Serial.print(controls.rpmCorrected);
 			Serial.print(" ,tpsCorrected=");
-			Serial.println(controls.tpsCorrected);
+			Serial.print(controls.tpsCorrected);
 			Serial.print("rpmActual=");
 			Serial.print(controls.rpmActual);
 			Serial.print(" ,tpsInput=");

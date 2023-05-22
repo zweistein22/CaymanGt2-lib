@@ -61,7 +61,6 @@ void setup() {
   pinMode(WATER_INJECT_VALVE_PIN,OUTPUT);
   digitalWrite(WATER_INJECT_VALVE_PIN,LOW);
  
-   STDERR.fpstderr = &LogError;
    HeadU_Zero();
   EngineMsmtU_Zero();
   startupmill = millis();

@@ -14,7 +14,7 @@
 #include <Can997.h>
 #include "vntlda.hpp"
 
-#define MINLOOPIME 100  // MINIMUM: SKIPREADEGTEACH *  MINLOOPIME > 140 ms 
+#define MINLOOPIME 80  // MINIMUM: SKIPREADEGTEACH *  MINLOOPIME > 140 ms 
 
 #define SKIPREADEGTEACH 2
 
@@ -128,17 +128,21 @@ class __WaterpumpsIC {
 	long lastnmot = 0;
 
 public:
+  long started_millis;
 	bool started = false;
 	 bool init(int pin) {
+    started = true;
+    started_millis = millis();
 		 pinMode(pin, OUTPUT);
 		 digitalWrite(pin, started);
 	    if(started)  INFOSERIAL(print("NTK WP started -1\n\r"));
 	}
 
 	 bool Update() {
-
-		 if (started) {
-			 if (max(Engine.sensor.iatl,Engine.sensor.iatr) < onabove - hysterese ) {
+     
+		 if (started){
+		  if( millis()-started_millis>9000) {
+		 	 if (max(Engine.sensor.iatl,Engine.sensor.iatr) < onabove - hysterese ) {
 				 digitalWrite(WATERPUMPS_PIN, LOW);
          		 started = false;
 
@@ -162,9 +166,8 @@ public:
 			 else {
 				 if (lastnmot != 0) lastnmot = 0;
 			 }
-			 
+			}
 		 }
-
 		 else {
 			 if (max(Engine.sensor.iatl, Engine.sensor.iatr) > (word)onabove && (can242.nmot / 4 > 500)) {
 				 digitalWrite(WATERPUMPS_PIN, HIGH);
@@ -176,6 +179,7 @@ public:
 				 INFOSERIAL(print("NTK WP started, \n\r"));
 
 				 started = true;
+         started_millis=millis();
 			 }
 		 }
 		
@@ -258,11 +262,10 @@ void setup() {
 //  pinMode(LA_PIN, INPUT);
  // pinMode(LA_START, OUTPUT); // LAMBDA START if set to HIGH
   delay(250);
-  Serial.begin(115200);
-  Serial.println("CayEngineSensor.startup");
+  INFOSERIAL(begin(115200));
+  INFOSERIAL(println("CayEngineSensor.startup"));
   vntlda::Init(MINLOOPIME);
 
-  WaterPumpIC.started = true;
   WaterPumpIC.init(WATERPUMPS_PIN);
 
   delay(4000);
@@ -274,7 +277,7 @@ void setup() {
 
 
 
-int rskip=0;
+int rskip=2;
 void ReadEGTs() {
 	double tl, tr;
 
@@ -338,8 +341,8 @@ void loop() {
 		  //Serial.println("CAN_begin() called");
 		  can_rv=CAN0_BeginMaster();
 		  if (can_rv != CAN_OK) {
-			  Serial.print("CAN0_BeginMaster() can_rv=");
-			  Serial.println(can_rv);
+			  INFOSERIAL(print("CAN0_BeginMaster() can_rv="));
+			  INFOSERIAL(println(can_rv));
        can0retry++;
 			  
 		  }
@@ -429,8 +432,8 @@ void loop() {
 		  can1_rv = CAN1_BeginMaster();
 		  if (can1_rv != CAN_OK) {
         can1retry++;
-			  Serial.print("CAN1_BeginMaster() can1_rv=");
-			  Serial.println(can1_rv);
+			  INFOSERIAL(print("CAN1_BeginMaster() can1_rv="));
+			  INFOSERIAL(println(can1_rv));
 			 // delay(500);
 		  }
      else can1retry=0;
