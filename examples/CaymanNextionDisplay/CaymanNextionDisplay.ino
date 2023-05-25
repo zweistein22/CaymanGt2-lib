@@ -1,8 +1,10 @@
 
 
 #define NO_PRINTLNDATASERIAL
-#define DEBUGSERIAL Serial
-#define SERIOUSERROR Serial
+
+#define INFOSERIAL(call) Serial.call
+// or do deactivate  #define INFOSERIAL(call)
+
 //#define _DISABLE_CANBUS
 //#define _SIMULATEDATA
 #include <Can997.h>
@@ -22,20 +24,19 @@ unsigned long startupmill=1;
 NextionDisplay disp(8,9);
 
 
+#define MINLOOPIME 200
 
 void LogError(const char *msg) {
-#ifdef DEBUGSERIAL
-  Serial.println(msg);
-#endif
+  INFOSERIAL(println(msg));
   disp.Error(msg);
 }
 
 
 void setup() {
-#ifdef  SERIOUSERROR
-  SERIOUSERROR.begin(115200);
-  SERIOUSERROR.println("SERIOUSRERROR => Serial");
-#endif
+   
+  INFOSERIAL(begin(115200));
+  INFOSERIAL(println("INFOSERIAL => Serial"));
+
   
   pinMode(OILPUMPIN_PIN,INPUT);
   pinMode(OILPUMP_PIN, OUTPUT);
@@ -84,6 +85,8 @@ MOTOR_2 can245;
 
 int iloop = 0;
 byte can_result = CAN_FAIL;
+
+unsigned long lastloopmillis = millis();
 void loop() {
   
   
@@ -162,8 +165,16 @@ void loop() {
   disp.IntakeTemp(iathigher, Head.settings.waterinjection);
   disp.Pumps(Head.settings.oilpump != 0, Engine.sensor.gearboxoilpump);
   
-  Serial.println(iloop);
-  delay(140);
+  
+unsigned long looptime = millis() - lastloopmillis;
+   if (looptime < MINLOOPIME ) {
+    delay(MINLOOPIME - looptime);
+    looptime = millis() - lastloopmillis;
+   }
+   INFOSERIAL(print("looptime (ms) : "));
+   INFOSERIAL(println(looptime));
+   lastloopmillis = millis();
+
 #ifndef NO_PRINTLNDATASERIAL
    PrintlnDataSerial(Engine.sensor,can242,can245);
 #endif

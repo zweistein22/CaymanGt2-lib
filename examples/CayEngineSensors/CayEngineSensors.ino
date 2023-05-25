@@ -14,7 +14,7 @@
 #include <Can997.h>
 #include "vntlda.hpp"
 
-#define MINLOOPIME 80  // MINIMUM: SKIPREADEGTEACH *  MINLOOPIME > 140 ms 
+#define MINLOOPIME 100  // MINIMUM: SKIPREADEGTEACH *  MINLOOPIME > 140 ms 
 
 #define SKIPREADEGTEACH 2
 
@@ -443,7 +443,10 @@ void loop() {
 	 ReadEGTs(); 
 	 PrintlnDataSerial(Engine.sensor,can242,can245);
 	 unsigned long looptime = millis() - lastloopmillis;
-	 if (looptime < MINLOOPIME ) delay(MINLOOPIME - looptime);
+	 if (looptime < MINLOOPIME ) {
+	  delay(MINLOOPIME - looptime);
+    looptime = millis() - lastloopmillis;
+	 }
 	 INFOSERIAL(print("looptime (ms) : "));
 	 INFOSERIAL(println(looptime));
 	 lastloopmillis = millis();

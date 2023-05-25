@@ -5,21 +5,16 @@
 char _ebuffer[70];
 PString error(_ebuffer, sizeof(_ebuffer));
 
-#ifdef DEBUGSERIAL
-#define dbSerialPrint(a)    DEBUGSERIAL.print(a)
-#define dbSerialPrintln(a)  DEBUGSERIAL.println(a)
-#define dbSerialBegin(a)    DEBUGSERIAL.begin(a)
-#else
-#define dbSerialPrint(a)    do{}while(0)
-#define dbSerialPrintln(a)  do{}while(0)
-#define dbSerialBegin(a)    do{}while(0)
-#endif
+
+#define DEBUGSERIAL(call) Serial.call
+
+// #define DEBUGSERIAL 
 
 
 bool _rear = true;
 bool _front = true;
 
-#define AVERAGE 2
+#define AVERAGE 1
 RunningAverage egtl(AVERAGE);
 RunningAverage egtr(AVERAGE);
 RunningAverage iat(AVERAGE);
@@ -80,18 +75,18 @@ uint16_t recvRetString(char *buffer, uint16_t len, uint32_t timeout= 100)
     
 __return:
 
-    dbSerialPrint("recvRetString[");
-    dbSerialPrint(temp.length());
-    dbSerialPrint(",");
-    dbSerialPrint(temp);
-    dbSerialPrintln("]");
+    DEBUGSERIAL(print("recvRetString["));
+    DEBUGSERIAL(print(temp.length()));
+    DEBUGSERIAL(print(","));
+    DEBUGSERIAL(print(temp));
+    DEBUGSERIAL(println("]"));
 
     return ret;
 }
 
 NextionDisplay::NextionDisplay(int tx, int rx){
 lasterrortime=millis();
-  Error("");
+ 
 
 }
 
@@ -190,11 +185,11 @@ void NextionDisplay::EGT(int left, int right, int statusleft, int statusright){
   }
 	void NextionDisplay::Error(const char *err){
     
-    disp.write("get err.text");
+    disp.write("get err.txt");
     disp.write(0xff);  disp.write(0xff);  disp.write(0xff);
     recvRetString(_ebuffer,70);
-    Serial.print("get error=");
-    Serial.println(error);
+   DEBUGSERIAL(print("get err.txt="));
+   DEBUGSERIAL(println(error));
 
     if(!strcmp(err,error)){
       return;
@@ -204,7 +199,7 @@ void NextionDisplay::EGT(int left, int right, int statusleft, int statusright){
     error.print(err);   
     lasterrortime=millis(); 
     disp.write("err.bco=");
-    disp.write(strlen(error)?"WHITE":"BLACK");         
+    disp.write(strlen(error)>0?"WHITE":"BLACK");         
     disp.write(0xff);disp.write(0xff);disp.write(0xff);
        
     disp.write("err.txt=\"");
