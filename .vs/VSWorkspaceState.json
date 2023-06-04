@@ -1,7 +1,9 @@
 {
   "ExpandedNodes": [
-    ""
+    "",
+    "\\examples",
+    "\\examples\\CaymanNextionDisplay",
+    "\\examples\\CaymanNextionDisplay\\src"
   ],
-  "SelectedNode": "\\Cayman987FrontDisplay.sln",
   "PreviewInSolutionExplorer": false
 }

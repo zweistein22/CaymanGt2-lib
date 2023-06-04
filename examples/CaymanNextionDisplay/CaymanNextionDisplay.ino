@@ -13,8 +13,10 @@
 #include "VacuumPump.h"
 #include "NextionDisplay.h"
 #define OILPUMPIN_PIN 6    // input
-char _buffer[70];
-PString line(_buffer, sizeof(_buffer));
+
+String line = String("");
+
+
 
 VacuumPump vacuumpump;
 CheckSequence checksequence;
@@ -33,7 +35,9 @@ void LogError(const char *msg) {
 
 
 void setup() {
-   
+  
+  line.reserve(60);
+  
   INFOSERIAL(begin(115200));
   INFOSERIAL(println("INFOSERIAL => Serial"));
 
@@ -42,21 +46,9 @@ void setup() {
   pinMode(OILPUMP_PIN, OUTPUT);
   digitalWrite(OILPUMP_PIN,LOW);
 
- disp.begin(9600);  // Start serial comunication at baud=9600
-  // I am going to change the Serial baud to a faster rate.
-  delay(500);  // This dalay is just in case the nextion display didn't start yet, to be sure it will receive the following command.
-  disp.print("baud=115200");  // Set new baud rate of nextion to 115200, but it's temporal. Next time nextion is power on,
-                                // it will retore to default baud of 9600.
-                                // To take effect, make sure to reboot the arduino (reseting arduino is not enough).
-                                // If you want to change the default baud, send the command as "bauds=115200", instead of "baud=115200".
-                                // If you change the default baud, everytime the nextion is power ON is going to have that baud rate, and
-                                // would not be necessery to set the baud on the setup anymore.
-  disp.write(0xff);  // We always have to send this three lines after each command sent to nextion.
-  disp.write(0xff);
-  disp.write(0xff);
-  disp.end();  // End the serial comunication of baud=9600
-  disp.begin(115200);  // Start serial comunication at baud=115200
-
+  delay(250);
+  disp.setup();
+  
   vacuumpump.Init();
   checksequence.Init(&LogError,Head,vacuumpump);
   pinMode(WATER_INJECT_VALVE_PIN,OUTPUT);
@@ -65,7 +57,7 @@ void setup() {
    HeadU_Zero();
   EngineMsmtU_Zero();
   startupmill = millis();
-  disp.Error("");
+  
 }
 
 float boost = 0;
@@ -93,6 +85,8 @@ void loop() {
   #ifndef _DISABLE_CANBUS
   if (can_result != CAN_OK) {
       Serial.println("CAN0_BeginSlave()");
+      disp.setup(); // so after can error display is reconnected.
+      // can error happen usually when ignition is off for short time only
       can_result = CAN0_BeginSlave();
       delay(500);
     
@@ -112,8 +106,7 @@ void loop() {
   Engine.sensor.iatl = random(30,110);
   Engine.sensor.nmot100 = random(10,70);
 #endif
-  disp.UpdateError();
-  mil=millis();
+   mil=millis();
   
 
   if(Engine.sensor.nmot100 * 100>500) {
@@ -154,13 +147,11 @@ void loop() {
   if (Engine.sensor.iatr > iathigher) iathigher = Engine.sensor.iatr;
   int iatdiff = abs(Engine.sensor.iatl - Engine.sensor.iatr);
   if (iatdiff > 15) {
-      line.begin();
-      if (Engine.sensor.iatr == iathigher) line.print("iat L");
-      else line.print("iat R");
-      line.print(" (-");
-      line.print(iatdiff);
-      line.print(")");
-      disp.Error(line);
+      line="";
+      if (Engine.sensor.iatr == iathigher) line+="iat L";
+      else line+="iat R";
+      line+=" (-" + String(iatdiff) + ")";
+      disp.Error(line.c_str());
   }
   disp.IntakeTemp(iathigher, Head.settings.waterinjection);
   disp.Pumps(Head.settings.oilpump != 0, Engine.sensor.gearboxoilpump);
@@ -171,8 +162,8 @@ unsigned long looptime = millis() - lastloopmillis;
     delay(MINLOOPIME - looptime);
     looptime = millis() - lastloopmillis;
    }
-   INFOSERIAL(print("looptime (ms) : "));
-   INFOSERIAL(println(looptime));
+   //INFOSERIAL(print("looptime (ms) : "));
+   //INFOSERIAL(println(looptime));
    lastloopmillis = millis();
 
 #ifndef NO_PRINTLNDATASERIAL

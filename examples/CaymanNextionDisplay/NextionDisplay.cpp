@@ -1,9 +1,8 @@
 #include "NextionDisplay.h"
-#include <PString.h>
 #include "RunningAverage.h"
 
-char _ebuffer[70];
-PString error(_ebuffer, sizeof(_ebuffer));
+
+String error = String("");
 
 
 #define DEBUGSERIAL(call) Serial.call
@@ -31,6 +30,7 @@ uint16_t recvRetString(char *buffer, uint16_t len, uint32_t timeout= 100)
     uint8_t c = 0;
     long start;
 
+    
     if (!buffer || len == 0)
     {
         goto __return;
@@ -84,11 +84,44 @@ __return:
     return ret;
 }
 
+
+
+
 NextionDisplay::NextionDisplay(int tx, int rx){
-lasterrortime=millis();
+    error.reserve(60);
+    lasterrortime=millis();
  
+    error = "ÿ"; // so != existing value
 
 }
+
+void NextionDisplay::setup() {
+    
+
+    disp.begin(9600);  // Start serial comunication at baud=9600
+
+    disp.print("rest"); // reset device
+    disp.write(0xff);  // We always have to send this three lines after each command sent to nextion.
+    disp.write(0xff);
+    disp.write(0xff);
+    disp.begin(9600);  // Start serial comunication at baud=9600
+  // I am going to change the Serial baud to a faster rate.
+    delay(500);  // This dalay is just in case the nextion display didn't start yet, to be sure it will receive the following command.
+    disp.print("baud=115200");  // Set new baud rate of nextion to 115200, but it's temporal. Next time nextion is power on,
+                                  // it will retore to default baud of 9600.
+                                  // To take effect, make sure to reboot the arduino (reseting arduino is not enough).
+                                  // If you want to change the default baud, send the command as "bauds=115200", instead of "baud=115200".
+                                  // If you change the default baud, everytime the nextion is power ON is going to have that baud rate, and
+                                  // would not be necessery to set the baud on the setup anymore.
+    disp.write(0xff);  // We always have to send this three lines after each command sent to nextion.
+    disp.write(0xff);
+    disp.write(0xff);
+    disp.end();  // End the serial comunication of baud=9600
+    disp.begin(115200);  // Start serial comunication at baud=115200
+
+   
+}
+
 
 NextionDisplay::~NextionDisplay(){
 
@@ -110,8 +143,8 @@ void NextionDisplay::_setNumber(char *objname,int number){
 }
 void NextionDisplay::EGT(int left, int right, int statusleft, int statusright){
 
-      //Serial.print("EGTL=");
-     // Serial.println(left);
+      DEBUGSERIAL(print("EGTL="));
+      DEBUGSERIAL(println(left));
        egtl.addValue(left);
        _setNumber("egtl", egtl.getAverage());
        egtr.addValue(right);
@@ -123,15 +156,10 @@ void NextionDisplay::EGT(int left, int right, int statusleft, int statusright){
 
   }
 	void NextionDisplay::Boost(float hpa){
-     char _fbuffer[4];
-     PString f(_fbuffer, sizeof(_fbuffer));
       bar.addValue((hpa));
-
-      // Serial.print("hpa=");
-      //Serial.println(bar.getAverage());
       int ihpa = bar.getAverage() *100;
-      //Serial.print("ihpa=");
-      //Serial.println(ihpa);
+      Serial.print("ihpa=");
+      Serial.println(ihpa);
       _setNumber("boost",ihpa);
       
   }
@@ -165,53 +193,47 @@ void NextionDisplay::EGT(int left, int right, int statusleft, int statusright){
         if (front != _front) {
             _front = front;
             disp.write("hotoil.pic=");
-            disp.write(front ? "0" : "1");
+            disp.write(_front ? "0" : "1");
             disp.write(0xff);  // We always have to send this three lines after each command sent to nextion.
             disp.write(0xff);
             disp.write(0xff);
+            DEBUGSERIAL(print("hotoil.pic= "));
+            DEBUGSERIAL(println(_front ? "0" : "1"));
+
+            
         }
 
         if (rear != _rear) {
             _rear = rear;
             disp.write("gear.pic=");
-            disp.write(rear ? "2" : "1");
+            disp.write(_rear ? "2" : "1");
             disp.write(0xff);  // We always have to send this three lines after each command sent to nextion.
             disp.write(0xff);
             disp.write(0xff);
+              DEBUGSERIAL(print("gear.pic= "));
+            DEBUGSERIAL(println(_rear ? "2" : "1"));
         }
 //    disp.write(0xff);  // We always have to send this three lines after each command sent to nextion.
 //      disp.write(0xff);
 //      disp.write(0xff);
   }
+
+ 
 	void NextionDisplay::Error(const char *err){
     
-    disp.write("get err.txt");
-    disp.write(0xff);  disp.write(0xff);  disp.write(0xff);
-    recvRetString(_ebuffer,70);
-   DEBUGSERIAL(print("get err.txt="));
-   DEBUGSERIAL(println(error));
-
-    if(!strcmp(err,error)){
-      return;
+    
+    
+     if(!strcmp(err,error.c_str())){
+      return; // same string, so do not send to nextion 
     }    
     
-    error.begin();
-    error.print(err);   
-    lasterrortime=millis(); 
-    disp.write("err.bco=");
-    disp.write(strlen(error)>0?"WHITE":"BLACK");         
-    disp.write(0xff);disp.write(0xff);disp.write(0xff);
-       
-    disp.write("err.txt=\"");
-    disp.write(err);
+     error = err;
+
+     disp.write("page 1");
+    disp.write("e0.txt=\"");
+    disp.write(error.c_str());
     disp.write("\"");
-    disp.write(0xff);  // We always have to send this three lines after each command sent to nextion.
-    disp.write(0xff);
-    disp.write(0xff);
+    disp.write(0xff); disp.write(0xff);disp.write(0xff);
+    
   }
-  void NextionDisplay::UpdateError(){
-    if(error=="") return;
-   if(millis()-lasterrortime > 15000) {
-       Error("");  
-       }    
-  }
+  
