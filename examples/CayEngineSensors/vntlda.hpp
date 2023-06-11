@@ -43,6 +43,8 @@ namespace vntlda {
 unsigned int EXEC_DELAY = 0; 
 const unsigned char versionString[] PROGMEM = "DMN-Vanbcguy Boost Ctrl v3.2.3";
 
+bool sportModus=true;
+
 unsigned char auxMap[] = {
   'M', '2', 'D',
   0x6, 0x8, MAP_AXIS_RPM, MAP_AXIS_EGT, MAP_AXIS_DUTY_CYCLE, // 01 - new version
@@ -76,6 +78,24 @@ unsigned char auxMap[] = {
   00, 00, 00,                // lastX,lastY,lastRet
 	};
 
+
+unsigned char boostRequestNormal[] = {
+  'M', '2', 'D',
+  0xC, 0xB, MAP_AXIS_RPM, MAP_AXIS_TPS, MAP_AXIS_KPA, // 01 - new version
+  100, 100, 100,100, 100, 100, 100, 100, 100, 100,100,100,
+  100, 100, 100,100, 100, 100, 100, 100, 100, 100,100,100,
+  100, 100, 100,100, 100, 100, 100, 100, 100, 100,100,100,
+  100, 100, 100,100, 100, 100, 100, 100, 100, 100,100,100,
+  100, 100, 100,100, 100, 100, 100, 100, 100, 100,100,100,
+  100, 100, 100,100, 100, 100, 100, 100, 100, 100,100,100,
+  100, 100, 100,100, 100, 100, 100, 100, 100, 100,100,100,
+  100, 100, 100,100, 100, 110, 120, 130, 140, 140,140,140,
+  100, 109, 133,175, 110, 120, 130, 140, 150, 150,150, 150,
+  150, 159, 150,170, 170, 170, 170, 170, 170, 170,170, 170,
+  160, 170, 170, 170,170, 170, 170, 170, 170, 170, 170,170,
+  00, 00, 00,                // lastX,lastY,lastRet
+  };
+  
 	unsigned char boostDCMax[] = {
   'M', '2', 'D',
   0x8, 0xB, MAP_AXIS_RPM, MAP_AXIS_TPS, MAP_AXIS_DUTY_CYCLE,
@@ -450,7 +470,7 @@ void PrintMap(unsigned char *mapData){
 
 		/* Look up the requested boost */
    
-		controls.vntTargetPressure = mapLookUp(boostRequest, controls.rpmCorrected, controls.tpsCorrected);
+		controls.vntTargetPressure = mapLookUp(sportModus?boostRequest:boostRequestNormal, controls.rpmCorrected, controls.tpsCorrected);
 
  //   Serial.print("controls.n75precontrol=");
  //  Serial.println(controls.n75precontrol);
@@ -624,6 +644,9 @@ void PrintMap(unsigned char *mapData){
 		calcKd();
     Serial.println("boostRequest");
    PrintMap(boostRequest);
+   Serial.println("");
+    Serial.println("boostRequestNormal");
+   PrintMap(boostRequestNormal);
    Serial.println("");
    Serial.println("n75precontrolMap");
    PrintMap(n75precontrolMap);

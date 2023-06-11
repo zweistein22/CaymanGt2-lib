@@ -29,7 +29,7 @@ void CheckSequence::Continue(unsigned long mil, float __map) {
 	switch (ChecksequenceStep) {
 	case 1:
 		if (mil > CheckEnd - Pause && !StepStopped) {
-			(*le)("");
+			//(*le)("");
 			pvacuumpump->Stop();
       pHead->settings.vacuumpump = 0;
 			StepStopped = true;
@@ -47,7 +47,7 @@ void CheckSequence::Continue(unsigned long mil, float __map) {
 		break;
 	case 2:
 		if (mil > CheckEnd - Pause && !StepStopped) {
-			(*le)("");
+			//(*le)("");
 			digitalWrite(WATER_INJECT_VALVE_PIN, LOW);
       pHead->settings.waterinjection = 0;
 			StepStopped = true;
@@ -64,7 +64,7 @@ void CheckSequence::Continue(unsigned long mil, float __map) {
 	case 3:
 		if (mil > CheckEnd - Pause && !StepStopped) {
 
-			(*le)("");
+			//(*le)("");
 			pHead->settings.oilpump = 0;
 			digitalWrite(OILPUMP_PIN, LOW);
 			StepStopped = true;
@@ -75,10 +75,8 @@ void CheckSequence::Continue(unsigned long mil, float __map) {
 					EEPROM_writeAnything(0, __map);
 					pressurehPa = __map;
 				}
-				line.begin();
-				line.print(pressurehPa, 1);
-				line.print("hPa. Oilpump ...");
-				(*le)(line);
+				line = String(pressurehPa) + "hPa. Oilpump ...";
+				(*le)(line.c_str());
 				pHead->settings.oilpump = 1;
 				digitalWrite(OILPUMP_PIN, HIGH);
 				StepStarted = true;

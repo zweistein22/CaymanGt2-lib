@@ -4,7 +4,7 @@
 #include <EngineMsmt.h>
 #include "VacuumPump.h"
 #include <EEPROM.h>
-#include <PString.h>
+
 template <class T> int EEPROM_writeAnything(int ee, const T& value)
 {
 	const byte* p = (const byte*)(const void*)&value;
@@ -66,6 +66,5 @@ private:
 #define OILPUMP_PIN 5    
 #define WATER_INJECT_VALVE_PIN 3
 
-extern PString line;
-
+extern String line;
 #endif

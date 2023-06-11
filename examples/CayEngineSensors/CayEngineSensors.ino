@@ -14,7 +14,7 @@
 #include <Can997.h>
 #include "vntlda.hpp"
 
-#define MINLOOPIME 80  // MINIMUM: SKIPREADEGTEACH *  MINLOOPIME > 140 ms 
+#define MINLOOPIME 100  // MINIMUM: SKIPREADEGTEACH *  MINLOOPIME > 140 ms 
 
 #define SKIPREADEGTEACH 2
 
@@ -118,12 +118,13 @@ float AirThermistor(int RawADC) {
 
 MOTOR_1 can242;
 MOTOR_2 can245;
+MOTOR_4 can441;
 //BREMSE_1 can14A;
 
 class __WaterpumpsIC {
 
 	int hysterese = 7;
-	int onabove = 53;
+	int onabove = 56;
 	long maxnachlauf = 2*60*1000; // 5 min
 	long lastnmot = 0;
 
@@ -134,7 +135,7 @@ public:
     started = true;
     started_millis = millis();
 		 pinMode(pin, OUTPUT);
-		 digitalWrite(pin, started);
+		 digitalWrite(pin, started?HIGH:LOW);
 	    if(started)  INFOSERIAL(print("NTK WP started -1\n\r"));
 	}
 
@@ -351,6 +352,7 @@ void loop() {
 	  if (can_rv == CAN_OK) {
 		  can_rv = CAN0_get242(200, can242);
 		  can_rv = CAN0_get245(150, can245);
+      can_rv = CAN0_get441(150, can441);
       //can_rv = CAN0_get14A(150,can14A);
 		  Engine.sensor.nmot100 = can242.nmot /(4*100);
 		  Engine.sensor.Tmot = can245.Tmot;
@@ -441,9 +443,12 @@ void loop() {
 	  if (can1_rv == CAN_OK)  can1_rv = CAN1_sendbothPrivate(Engine);
 	    
 	 ReadEGTs(); 
-	 PrintlnDataSerial(Engine.sensor,can242,can245);
+	 PrintlnDataSerial(Engine.sensor,can242,can245,can441);
 	 unsigned long looptime = millis() - lastloopmillis;
-	 if (looptime < MINLOOPIME ) delay(MINLOOPIME - looptime);
+	 if (looptime < MINLOOPIME ) {
+	  delay(MINLOOPIME - looptime);
+    looptime = millis() - lastloopmillis;
+	 }
 	 INFOSERIAL(print("looptime (ms) : "));
 	 INFOSERIAL(println(looptime));
 	 lastloopmillis = millis();
