@@ -1,1 +1,6 @@
-/.vs
+.vs/
+Debug/
+Release/
+__vm/
+obj/
+
