@@ -1,5 +1,3 @@
-
-
 #define NO_PRINTLNDATASERIAL
 
 #define INFOSERIAL(call) Serial.call
@@ -7,6 +5,8 @@
 
 //#define _DISABLE_CANBUS
 //#define _SIMULATEDATA
+
+//#define MCP_STDERR(call)   // to remove STDERR output
 #include <Can997.h>
 #include <BreitBandLambda.h>
 #include "CheckSequence.h"
@@ -21,12 +21,12 @@ String line = String("");
 VacuumPump vacuumpump;
 CheckSequence checksequence;
 
-unsigned long startupmill=1; 
-
+unsigned long startupmill=0; 
+byte disp_bright=5;
 NextionDisplay disp(8,9);
 
 
-#define MINLOOPIME 200
+#define MINLOOPIME 100
 
 void LogError(const char *msg) {
   INFOSERIAL(println(msg));
@@ -37,7 +37,7 @@ void LogError(const char *msg) {
 void setup() {
   
   line.reserve(60);
-  
+  delay(250);
   INFOSERIAL(begin(115200));
   INFOSERIAL(println("INFOSERIAL => Serial"));
 
@@ -46,18 +46,29 @@ void setup() {
   pinMode(OILPUMP_PIN, OUTPUT);
   digitalWrite(OILPUMP_PIN,LOW);
 
-  delay(250);
-  disp.setup();
-
   
+  disp.sendCommand("rest");
+  delay(500);
+  disp.setup();
+  disp.sendCommand("dim=5"); // low display
+  disp_bright=5;
+  delay(1250);
+  Serial.print("CAN0_CS=");
+  Serial.print(CAN0_CS);
+  Serial.print(" CAN0_INT=");
+  Serial.println(CAN0_INT);
   vacuumpump.Init();
-  checksequence.Init(&LogError,Head,vacuumpump);
-  pinMode(WATER_INJECT_VALVE_PIN,OUTPUT);
-  digitalWrite(WATER_INJECT_VALVE_PIN,LOW);
+
+
  
    HeadU_Zero();
   EngineMsmtU_Zero();
   startupmill = millis();
+
+  checksequence.Setup(&LogError,Head,vacuumpump);
+  pinMode(WATER_INJECT_VALVE_PIN,OUTPUT);
+  digitalWrite(WATER_INJECT_VALVE_PIN,LOW);
+ 
   
 }
 
@@ -70,7 +81,6 @@ unsigned long dmil=0;
 unsigned long last_millis = millis();
 unsigned long mil = 0;
 
-
 #ifndef NO_PRINTLNDATASERIAL
 MOTOR_1 can242;
 MOTOR_2 can245;
@@ -80,16 +90,35 @@ int iloop = 0;
 byte can_result = CAN_FAIL;
 
 unsigned long lastloopmillis = millis();
+#define CANINITRETRY 10000
+const int PLAUSIBLETOL =  4;
+unsigned long lastcaninit=-CANINITRETRY;
+
+int notplausiblecount=0;
+
+
+bool IsPlausible(EngineMsmt &engine){
+  if(engine.egtl == 0) return false;
+  if(engine.egtl == 0) return false;
+  if(engine.egtl > 1400) return false;
+  if(engine.egtl > 1400) return false;
+  if(Engine.sensor.map == 0 ) return false;
+ return true;
+}
 void loop() {
   
   
   #ifndef _DISABLE_CANBUS
-  if (can_result != CAN_OK) {
+  if(can_result != CAN_OK  
+          || notplausiblecount>=PLAUSIBLETOL) {
       Serial.println("CAN0_BeginSlave()");
-      disp.setup(); // so after can error display is reconnected.
+      //disp.sendCommand("rest");
+      //delay(500);
+      //disp.setup(); // so after can error display is reconnected.
       // can error happen usually when ignition is off for short time only
+      SPI.begin(); // resets can bus
       can_result = CAN0_BeginSlave();
-      delay(500);
+      lastcaninit=millis();
     
   }
   #endif
@@ -97,6 +126,11 @@ void loop() {
   
   if (can_result == CAN_OK) can_result = CAN0_getbothPrivate(800, Engine);
   iloop++;
+  if(!IsPlausible(Engine.sensor)){
+    notplausiblecount++;
+    if(notplausiblecount<PLAUSIBLETOL)  goto nextloop;
+  }
+  notplausiblecount=0;
   boost = ((float) Engine.sensor.map) / checksequence.pressurehPa - 1.0f;
 
 #ifdef _SIMULATEDATA
@@ -105,6 +139,7 @@ void loop() {
   Engine.sensor.egtr = Engine.sensor.egtl + random(-100, 100);
   boost = random(900, 1200) / 1000.0f;
   Engine.sensor.iatl = random(30,110);
+  Engine.sensor.iatr = Engine.sensor.iatl + random(-10,10);
   Engine.sensor.nmot100 = random(10,70);
 #endif
    mil=millis();
@@ -113,9 +148,15 @@ void loop() {
   if(Engine.sensor.nmot100 * 100>500) {
        EngineNeverStarted=false;
    }
-   if((mil>startupmill+1000*2) && EngineNeverStarted==true && checksequence.ChecksequenceStep==-1){
-      // we start check sequence only when not started for 5 seconds
-         checksequence.ChecksequenceStep=0;
+   if((mil>startupmill+8000)){
+       if( EngineNeverStarted==true && checksequence.ChecksequenceStep==-1){
+   
+      // we start check sequence only when not started for 8 seconds
+         checksequence.Begin();
+       }
+       if(disp_bright!=100) { disp.sendCommand("dim=100");
+              disp_bright=100;
+       }
    }
    checksequence.Continue(mil, Engine.sensor.map);
    Head.settings.waterinjection=false;
@@ -139,7 +180,6 @@ void loop() {
   vacuumpump.Update(mil);
   Head.settings.oilpump = digitalRead(OILPUMPIN_PIN);
 
- 
   disp.EGT(Engine.sensor.egtl, Engine.sensor.egtr, (int)Engine.sensor.EGT_Status_left, (int)Engine.sensor.EGT_Status_right);
   disp.Boost(boost);
   disp.Lambda( Engine.sensor.lambdaplus100-100,Engine.sensor.llambdaplus100-100);
@@ -155,9 +195,10 @@ void loop() {
       disp.Error(line.c_str());
   }
   disp.IntakeTemp(iathigher, Head.settings.waterinjection);
-  disp.Pumps(Head.settings.oilpump != 0, Engine.sensor.gearboxoilpump);
+  disp.Pumps(Head.settings.oilpump, Engine.sensor.gearboxoilpump);
   
-  
+ nextloop:
+ 
 unsigned long looptime = millis() - lastloopmillis;
    if (looptime < MINLOOPIME ) {
     delay(MINLOOPIME - looptime);

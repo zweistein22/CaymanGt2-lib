@@ -30,8 +30,8 @@ typedef void(*fpLogError)(const char *);
 
 class CheckSequence {
 public:
-	
-	void Init(fpLogError logerror, HeadU &_head,VacuumPump &_vac) {
+	void Begin();
+	void Setup(fpLogError logerror, HeadU &_head,VacuumPump &_vac) {
 		le=logerror;
 		pHead=&_head;
 		pvacuumpump = &_vac;
@@ -53,12 +53,10 @@ private:
 	fpLogError le;
 	HeadU * pHead;
 	VacuumPump *pvacuumpump;
-	unsigned long RunTestMillis[3] = { 1000 * 3,1000 * 3,1000 * 5 };
-	unsigned long Pause = 4000;
+	unsigned long RunTestMillis[7] = { 0,5000,3000 /*pause*/,5000,3000 /*pause*/,5000,0 };
+	
 	unsigned long CheckEnd = 0;
-	bool StepStarted = false;
-	bool StepStopped = false;
-
+	
 
 };
 

@@ -5,14 +5,14 @@
 String error = String("");
 
 
-#define DEBUGSERIAL(call) Serial.call
+//#define DEBUGSERIAL(call) Serial.call
 
-// #define DEBUGSERIAL 
+#define DEBUGSERIAL(call) 
 
 
 bool _rear = true;
 bool _front = true;
-
+bool _wi=false;
 #define AVERAGE 1
 RunningAverage egtl(AVERAGE);
 RunningAverage egtr(AVERAGE);
@@ -89,38 +89,43 @@ __return:
 
 NextionDisplay::NextionDisplay(int tx, int rx){
     error.reserve(60);
-    lasterrortime=millis();
- 
     error = "x"; // so != existing value
 
 }
 
+
 void NextionDisplay::setup() {
     
-
-    disp.begin(9600);  // Start serial comunication at baud=9600
-
-    disp.print("rest"); // reset device
-    disp.write(0xff);  // We always have to send this three lines after each command sent to nextion.
-    disp.write(0xff);
-    disp.write(0xff);
     disp.begin(9600);  // Start serial comunication at baud=9600
   // I am going to change the Serial baud to a faster rate.
     delay(500);  // This dalay is just in case the nextion display didn't start yet, to be sure it will receive the following command.
-    disp.print("baud=115200");  // Set new baud rate of nextion to 115200, but it's temporal. Next time nextion is power on,
+    sendCommand("baud=57600");
+    // Set new baud rate of nextion to 115200, but it's temporal. Next time nextion is power on,
                                   // it will retore to default baud of 9600.
                                   // To take effect, make sure to reboot the arduino (reseting arduino is not enough).
                                   // If you want to change the default baud, send the command as "bauds=115200", instead of "baud=115200".
                                   // If you change the default baud, everytime the nextion is power ON is going to have that baud rate, and
                                   // would not be necessery to set the baud on the setup anymore.
-    disp.write(0xff);  // We always have to send this three lines after each command sent to nextion.
-    disp.write(0xff);
-    disp.write(0xff);
     disp.end();  // End the serial comunication of baud=9600
-    disp.begin(115200);  // Start serial comunication at baud=115200
+    disp.begin(57600);  // Start serial comunication at baud=115200
     delay(250);
 
    
+}
+
+void NextionDisplay::sendCommand(const char *cmd){
+
+   while (disp.available())
+   {
+        disp.read();
+   }
+   disp.print(cmd); 
+   disp.write(0xFF);
+   disp.write(0xFF);
+   disp.write(0xFF);
+   DEBUGSERIAL(print("sendCommand("));
+   DEBUGSERIAL(print(cmd));
+   DEBUGSERIAL(println(")"));
 }
 
 
@@ -130,22 +135,18 @@ NextionDisplay::~NextionDisplay(){
 	
 }
 
-void NextionDisplay::_setNumber(char *objname,int number){
+void NextionDisplay::_setNumber(const char *objname,int number){
 
-  char buf[10] = {0};
-  utoa(number, buf, 10);
-   disp.write(objname);
-   disp.write(".val=");
-      disp.write(buf);
-      disp.write(0xff);  // We always have to send this three lines after each command sent to nextion.
-      disp.write(0xff);
-      disp.write(0xff);
-  
+  String cmd=String(objname);
+  cmd+=".val=";
+  cmd+=String(number);
+  sendCommand(cmd.c_str());
+   
 }
 void NextionDisplay::EGT(int left, int right, int statusleft, int statusright){
 
-      DEBUGSERIAL(print("EGTL="));
-      DEBUGSERIAL(println(left));
+      //DEBUGSERIAL(print("EGTL="));
+      //DEBUGSERIAL(println(left));
        egtl.addValue(left);
        _setNumber("egtl", egtl.getAverage());
        egtr.addValue(right);
@@ -159,8 +160,8 @@ void NextionDisplay::EGT(int left, int right, int statusleft, int statusright){
 	void NextionDisplay::Boost(float hpa){
       bar.addValue((hpa));
       int ihpa = bar.getAverage() *100;
-      Serial.print("ihpa=");
-      Serial.println(ihpa);
+      //Serial.print("ihpa=");
+      //Serial.println(ihpa);
       _setNumber("boost",ihpa);
       
   }
@@ -185,67 +186,48 @@ void NextionDisplay::EGT(int left, int right, int statusleft, int statusright){
 
       iat.addValue(air);
       _setNumber("iat",iat.getAverage());
-       disp.write("iat.bco=");
-       disp.write(injectwater?"BLUE":"BLACK");         
-       disp.write(0xff);disp.write(0xff);disp.write(0xff);
-      
+      if(_wi!=injectwater){
+        _wi=injectwater;
+       String cmd="iat.bco=";
+       cmd+=injectwater?"BLUE":"BLACK";
+       sendCommand(cmd.c_str());
+      }
   }
+
 	void NextionDisplay::Pumps(bool front, bool rear){
         if (front != _front) {
             _front = front;
-            disp.write("hotoil.pic=");
-            disp.write(_front ? "0" : "1");
-            disp.write(0xff);  // We always have to send this three lines after each command sent to nextion.
-            disp.write(0xff);
-            disp.write(0xff);
-            DEBUGSERIAL(print("hotoil.pic= "));
-            DEBUGSERIAL(println(_front ? "0" : "1"));
-
-            
+             String cmd="hotoil.pic=";
+             cmd+=_front ? "0" : "1";
+             sendCommand(cmd.c_str());
         }
 
         if (rear != _rear) {
             _rear = rear;
-            disp.write("gear.pic=");
-            disp.write(_rear ? "2" : "1");
-            disp.write(0xff);  // We always have to send this three lines after each command sent to nextion.
-            disp.write(0xff);
-            disp.write(0xff);
-              DEBUGSERIAL(print("gear.pic= "));
-            DEBUGSERIAL(println(_rear ? "2" : "1"));
+              String cmd="gear.pic=";
+             cmd+=_rear ? "2" : "1";
+             sendCommand(cmd.c_str());
         }
-//    disp.write(0xff);  // We always have to send this three lines after each command sent to nextion.
-//      disp.write(0xff);
-//      disp.write(0xff);
+
   }
 
  
 	void NextionDisplay::Error(const char *err){
-    
-    
-    
-     if(!strcmp(err,error.c_str())){
+    if(!strcmp(err,error.c_str())){
       return; // same string, so do not send to nextion 
     }    
+    //DEBUGSERIAL(print("NextionDisplay::Error("));
+    //DEBUGSERIAL(println(err));
+    error = err;
+    sendCommand("page 1");
+    sendCommand("tm0.en=0");
+    String cmd="e0.txt=\"";
+    cmd+=error;
+    cmd+="\"";
+    sendCommand(cmd.c_str());
+    //sendCommand("tm0.tim=20000");
+    sendCommand("tm0.en=1");
+   // sendCommand("ref e0");
     
-     error = err;
-
-     disp.write("page 1");
-     disp.write(0xff); disp.write(0xff);disp.write(0xff);
-
-     disp.write("tm0.en=0");
-     disp.write(0xff); disp.write(0xff);disp.write(0xff);
-
-     disp.write("tm0.tim=15000");
-     disp.write(0xff); disp.write(0xff);disp.write(0xff);
-     
-    disp.write("tm0.en=1");
-    disp.write(0xff); disp.write(0xff);disp.write(0xff);
-    
-    disp.write("e0.txt=\"");
-    disp.write(error.c_str());
-    disp.write("\"");
-    disp.write(0xff); disp.write(0xff);disp.write(0xff);
-   
   }
   

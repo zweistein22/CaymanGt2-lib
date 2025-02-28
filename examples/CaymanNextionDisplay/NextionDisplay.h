@@ -4,6 +4,8 @@ class NextionDisplay: public NeoICSerial {
   public:
   NextionDisplay(int rx, int tx);
   void setup();
+  void sendCommand(const char *cmd);
+  
   ~NextionDisplay();
   void EGT(int left, int right, int statusleft, int statusright);
 	void Boost(float hpa);
@@ -13,8 +15,9 @@ class NextionDisplay: public NeoICSerial {
 	void Error(const char *err);
  
   private:
-  void _setNumber(char *objname,int number);
-  unsigned long lasterrortime;
+  
+  void _setNumber(const char *objname,int number);
+ 
   
 };
 
