@@ -1,12 +1,14 @@
 #include <EEPROM.h>
 #include <ResponsiveAnalogRead.h>
 #include <PID_v1.h>
+
 #define LAMBDASERIAL Serial3
 #define LAMBDA2SERIAL Serial2
 //#define DEBUGSERIAL Serial
+#define MCP_STDERR(call) Serial.call
 
 #define INFOSERIAL(call) Serial.call
-// or do deactivate  #define INFOSERIAL(call)
+//#define INFOSERIAL(call)
 
 #include <BreitBandLambda.h>
 #include <PString.h>
@@ -119,6 +121,8 @@ float AirThermistor(int RawADC) {
 MOTOR_1 can242;
 MOTOR_2 can245;
 MOTOR_4 can441;
+GW_A_1 can308;
+
 //BREMSE_1 can14A;
 
 class __WaterpumpsIC {
@@ -136,7 +140,7 @@ public:
     started_millis = millis();
 		 pinMode(pin, OUTPUT);
 		 digitalWrite(pin, started?HIGH:LOW);
-	    if(started)  INFOSERIAL(print("NTK WP started -1\n\r"));
+	    if(started)  Serial.print("NTK WP started -1\n\r");
 	}
 
 	 bool Update() {
@@ -211,7 +215,6 @@ float fTrackUse(unsigned long mil,float egtl,float egtr,float map){
   DEBUGSERIAL.print(avgTimeMs);
 #endif
   float p=dmi/avgTimeMs;
-  if(p==0) return ftrack;
   ftrack=  p*v+ (1-p)*ftrack;
   lastmill=mil;
   return ftrack;
@@ -269,7 +272,7 @@ void setup() {
 
   WaterPumpIC.init(WATERPUMPS_PIN);
 
-  delay(4000);
+  delay(2000);
   
  // digitalWrite(LA_START, HIGH);
   setPwmFrequencyMEGA2560(N75,5);
@@ -342,7 +345,7 @@ void loop() {
 		  //Serial.println("CAN_begin() called");
 		  can_rv=CAN0_BeginMaster();
 		  if (can_rv != CAN_OK) {
-			  INFOSERIAL(print("CAN0_BeginMaster() can_rv="));
+			  INFOSERIAL(print("CAN0 Antrieb ERROR rv="));
 			  INFOSERIAL(println(can_rv));
        can0retry++;
 			  
@@ -353,18 +356,32 @@ void loop() {
 		  can_rv = CAN0_get242(200, can242);
 		  can_rv = CAN0_get245(150, can245);
       can_rv = CAN0_get441(150, can441);
+      can_rv = CAN0_get308(150, can308);
       //can_rv = CAN0_get14A(150,can14A);
 		  Engine.sensor.nmot100 = can242.nmot /(4*100);
 		  Engine.sensor.Tmot = can245.Tmot;
 	  }
 	 
-
+   
    
 	  Engine.sensor.iatl=(int)AirThermistor(analogRead(AIRL_PIN));       // read ADC and  convert it to Celsius
 	  Engine.sensor.iatr = (int) AirThermistor(analogRead(AIRR_PIN));       // read ADC and  convert it to Celsius
-	  Engine.sensor.map=(int)iManifoldAbsolutePressurehPa(analogRead(MAP_PIN));
 
 	  
+    if(true){
+      Engine.sensor.map=(int) (1000*(1.0+can441.Oeldruck*0.04));
+      
+    }
+    else{
+      Engine.sensor.map=(int)iManifoldAbsolutePressurehPa(analogRead(MAP_PIN));
+    }
+
+	  if(can308.Sportmodus_BSG_A){
+
+      // sport mode
+      INFOSERIAL(println("sportmode"));
+      
+	  }
 	  vntlda::loop(vd,Engine.sensor.map, can242.nmot/4, can242.Wped_fgr , max(Engine.sensor.egtl,Engine.sensor.egtr));
 
     nduty = (unsigned int) vd.nduty;
@@ -417,7 +434,7 @@ void loop() {
        ftr=fTrackUse(mil,Engine.sensor.egtl,Engine.sensor.egtr, Engine.sensor.map);
        if(ftr>0.25) {btrack=true;}
            
-      if(Engine.sensor.gearboxoilpump!=btrack)   Engine.sensor.gearboxoilpump=btrack;
+       Engine.sensor.gearboxoilpump=btrack;
 		  
 	  if (can242.nmot/4 < 500) Engine.sensor.gearboxoilpump = 0;
 	  if (can_rv != CAN_OK) { Engine.sensor.gearboxoilpump = 0; }
@@ -429,12 +446,12 @@ void loop() {
 	 
 	  WaterPumpIC.Update();
 
-	  if (can1_rv != CAN_OK && !(can1retry%100)) {
+	  if (can1_rv != CAN_OK && !(can1retry%200)) {
 		  //Serial.println("CAN_begin() called");
 		  can1_rv = CAN1_BeginMaster();
 		  if (can1_rv != CAN_OK) {
         can1retry++;
-			  INFOSERIAL(print("CAN1_BeginMaster() can1_rv="));
+			  INFOSERIAL(print("CAN1 Front Display ERROR rv="));
 			  INFOSERIAL(println(can1_rv));
 			 // delay(500);
 		  }
@@ -443,14 +460,17 @@ void loop() {
 	  if (can1_rv == CAN_OK)  can1_rv = CAN1_sendbothPrivate(Engine);
 	    
 	 ReadEGTs(); 
+   //INFOSERIAL(print("Engine.sensor.gearboxoilpump : "));
+   //INFOSERIAL(println(Engine.sensor.gearboxoilpump));
+   
 	 PrintlnDataSerial(Engine.sensor,can242,can245,can441);
 	 unsigned long looptime = millis() - lastloopmillis;
 	 if (looptime < MINLOOPIME ) {
 	  delay(MINLOOPIME - looptime);
     looptime = millis() - lastloopmillis;
 	 }
-	 INFOSERIAL(print("looptime (ms) : "));
-	 INFOSERIAL(println(looptime));
+	 //INFOSERIAL(print("looptime (ms) : "));
+	 //INFOSERIAL(println(looptime));
 	 lastloopmillis = millis();
    iloop++;
    
