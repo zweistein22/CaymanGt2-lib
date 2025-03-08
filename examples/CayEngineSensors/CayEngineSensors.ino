@@ -368,7 +368,7 @@ void loop() {
 	  Engine.sensor.iatr = (int) AirThermistor(analogRead(AIRR_PIN));       // read ADC and  convert it to Celsius
 
 	  
-    if(true){
+    if(false /*true to show oil pressure instead of boost */ ) {
       Engine.sensor.map=(int) (1000*(1.0+can441.Oeldruck*0.04));
       
     }
@@ -377,10 +377,17 @@ void loop() {
     }
 
 	  if(can308.Sportmodus_BSG_A){
-
-      // sport mode
-      INFOSERIAL(println("sportmode"));
-      
+		  if (vntlda::sportModus != true) {
+			  vntlda::sportModus = true;
+			  INFOSERIAL(println("sportmode"));
+		  }
+		 
+   	  }
+	  else {
+		  if (vntlda::sportModus != false) {
+			  vntlda::sportModus = true;
+			  INFOSERIAL(println("normalmode"));
+		  }
 	  }
 	  vntlda::loop(vd,Engine.sensor.map, can242.nmot/4, can242.Wped_fgr , max(Engine.sensor.egtl,Engine.sensor.egtr));
 

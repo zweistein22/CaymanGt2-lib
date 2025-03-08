@@ -22,7 +22,6 @@ VacuumPump vacuumpump;
 CheckSequence checksequence;
 
 unsigned long startupmill=0; 
-byte disp_bright=5;
 NextionDisplay disp(8,9);
 
 
@@ -50,8 +49,7 @@ void setup() {
   disp.sendCommand("rest");
   delay(500);
   disp.setup();
-  disp.sendCommand("dim=5"); // low display
-  disp_bright=5;
+  disp.sendCommand("dim=100");
   delay(1250);
   Serial.print("CAN0_CS=");
   Serial.print(CAN0_CS);
@@ -59,8 +57,6 @@ void setup() {
   Serial.println(CAN0_INT);
   vacuumpump.Init();
 
-
- 
    HeadU_Zero();
   EngineMsmtU_Zero();
   startupmill = millis();
@@ -148,15 +144,13 @@ void loop() {
   if(Engine.sensor.nmot100 * 100>500) {
        EngineNeverStarted=false;
    }
-   if((mil>startupmill+8000)){
+   if((mil>startupmill+12000)){
        if( EngineNeverStarted==true && checksequence.ChecksequenceStep==-1){
    
-      // we start check sequence only when not started for 8 seconds
+      // we start check sequence only when not started for 12 seconds
          checksequence.Begin();
        }
-       if(disp_bright!=100) { disp.sendCommand("dim=100");
-              disp_bright=100;
-       }
+       
    }
    checksequence.Continue(mil, Engine.sensor.map);
    Head.settings.waterinjection=false;

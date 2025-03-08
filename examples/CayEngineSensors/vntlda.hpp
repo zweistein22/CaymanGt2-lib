@@ -43,7 +43,7 @@ namespace vntlda {
 unsigned int EXEC_DELAY = 0; 
 const unsigned char versionString[] PROGMEM = "DMN-Vanbcguy Boost Ctrl v3.2.3";
 
-bool sportModus=true;
+bool sportModus=false;
 
 unsigned char auxMap[] = {
   'M', '2', 'D',
